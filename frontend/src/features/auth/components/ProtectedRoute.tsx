@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux'
 
 import type { RootState } from '../../../app/store'
 import type { Role } from '../types'
+import { getDefaultRouteForRole } from '../routing'
 
 interface ProtectedRouteProps {
   allowedRoles?: Role[]
@@ -17,7 +18,7 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   }
 
   if (allowedRoles && role && !allowedRoles.includes(role)) {
-    return <Navigate to="/" replace />
+    return <Navigate to={getDefaultRouteForRole(role)} replace />
   }
 
   return <Outlet />

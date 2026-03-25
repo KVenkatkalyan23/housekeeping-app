@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
 import type { AppDispatch } from '../../../app/store'
+import { getDefaultRouteForRole } from '../routing'
 import { createAuthStateFromLoginResponse, loginSuccess, persistAuthState } from '../slice'
 import { useLoginMutation } from '../api'
 
@@ -75,15 +76,6 @@ function resolveErrorMessage(error: unknown) {
   )
 }
 
-function getRedirectPath(role: 'ADMIN' | 'STAFF') {
-  switch (role) {
-    case 'ADMIN':
-    case 'STAFF':
-    default:
-      return '/'
-  }
-}
-
 export function LoginForm() {
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
@@ -129,7 +121,7 @@ export function LoginForm() {
       dispatch(loginSuccess(response))
       toast.success(`Signed in as ${response.username}`)
 
-      navigate(fromPath ?? getRedirectPath(response.role), { replace: true })
+      navigate(fromPath ?? getDefaultRouteForRole(response.role), { replace: true })
     } catch (error) {
       setSubmitError(resolveErrorMessage(error))
     }

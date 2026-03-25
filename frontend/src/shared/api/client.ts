@@ -11,9 +11,7 @@ import {
   logout,
   readPersistedAuthState,
 } from "../../features/auth/slice";
-
-const baseUrl =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
+import { baseUrl } from "../constants";
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl,
