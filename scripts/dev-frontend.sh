@@ -1,2 +1,5 @@
-cd backend && ./mvnw test
-cd ../frontend && npm run lint
+#!/bin/bash
+set -e
+
+cd backend
+./mvnw spring-boot:run

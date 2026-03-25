@@ -95,13 +95,14 @@ App builds and runs successfully
 
 ### Start Backend
 
-````bash
+```bash
 ./scripts/dev-backend.sh
-
+```
 
 ## Frontend
 
 ### Start Frontend
+
 ```bash
 ./scripts/dev-frontend.sh
-````
+```
