@@ -1,6 +1,6 @@
 package com.ibe.housekeeping.entity;
 
-import com.ibe.housekeeping.entity.enums.AvailabilityStatus;
+import com.ibe.housekeeping.common.enums.AvailabilityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

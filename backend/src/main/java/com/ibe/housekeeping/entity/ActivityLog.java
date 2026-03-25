@@ -1,8 +1,8 @@
 package com.ibe.housekeeping.entity;
 
-import com.ibe.housekeeping.entity.enums.ActorType;
-import com.ibe.housekeeping.entity.enums.EventCategory;
-import com.ibe.housekeeping.entity.enums.Severity;
+import com.ibe.housekeeping.common.enums.ActorType;
+import com.ibe.housekeeping.common.enums.EventCategory;
+import com.ibe.housekeeping.common.enums.Severity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

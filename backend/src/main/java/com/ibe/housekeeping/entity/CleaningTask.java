@@ -1,7 +1,7 @@
 package com.ibe.housekeeping.entity;
 
-import com.ibe.housekeeping.entity.enums.TaskStatus;
-import com.ibe.housekeeping.entity.enums.TaskType;
+import com.ibe.housekeeping.common.enums.TaskStatus;
+import com.ibe.housekeeping.common.enums.TaskType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

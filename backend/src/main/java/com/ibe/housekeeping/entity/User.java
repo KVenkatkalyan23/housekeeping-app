@@ -1,6 +1,6 @@
 package com.ibe.housekeeping.entity;
 
-import com.ibe.housekeeping.entity.enums.Role;
+import com.ibe.housekeeping.common.enums.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
