@@ -81,3 +81,27 @@ Empty states handled
 
 No console errors
 App builds and runs successfully
+
+# ⚙️ Commands
+
+## General Rules
+
+- Always use scripts from the `/scripts` folder
+- Always run relevant scripts to verify changes after implementation
+
+---
+
+## Backend
+
+### Start Backend
+
+````bash
+./scripts/dev-backend.sh
+
+
+## Frontend
+
+### Start Frontend
+```bash
+./scripts/dev-frontend.sh
+````
