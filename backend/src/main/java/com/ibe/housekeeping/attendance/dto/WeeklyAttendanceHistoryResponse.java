@@ -7,6 +7,7 @@ public record WeeklyAttendanceHistoryResponse(
         LocalDate weekStart,
         LocalDate weekEnd,
         WeeklyAttendanceSummaryResponse summary,
-        List<WeeklyAttendanceLogItemResponse> logs
+        List<WeeklyAttendanceLogItemResponse> logs,
+        WeeklyAttendancePaginationResponse pagination
 ) {
 }

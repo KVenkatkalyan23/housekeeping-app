@@ -58,4 +58,10 @@ export interface WeeklyAttendanceHistoryResponse {
   weekEnd: string
   summary: WeeklyAttendanceSummaryResponse
   logs: WeeklyAttendanceLogItemResponse[]
+  pagination: {
+    page: number
+    size: number
+    hasPrevious: boolean
+    hasNext: boolean
+  }
 }

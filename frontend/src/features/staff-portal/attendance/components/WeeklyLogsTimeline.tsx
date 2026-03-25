@@ -12,12 +12,6 @@ export function WeeklyLogsTimeline({ logs }: WeeklyLogsTimelineProps) {
         <h2 className="text-xl font-semibold tracking-[-0.03em] text-[#23324d]">
           Weekly Logs
         </h2>
-        <button
-          type="button"
-          className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[#3c65c7]"
-        >
-          View Full History
-        </button>
       </div>
 
       <div className="relative mt-4 pl-5">

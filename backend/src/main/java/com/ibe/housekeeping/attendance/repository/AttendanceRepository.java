@@ -18,4 +18,6 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
             LocalDate startDate,
             LocalDate endDate
     );
+
+    Optional<Attendance> findTopByStaffIdOrderByWorkDateAscClockInTimeAsc(UUID staffId);
 }

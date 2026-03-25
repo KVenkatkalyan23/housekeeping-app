@@ -1,7 +1,8 @@
-import { toast } from 'react-toastify'
+import { useState } from 'react'
 
 import { useGetWeeklyAttendanceHistoryQuery } from '../api'
 import { AttendanceHeader } from '../components/AttendanceHeader'
+import { AttendanceHistoryPagination } from '../components/AttendanceHistoryPagination'
 import { BottomNav } from '../components/BottomNav'
 import { WeeklyLogsTimeline } from '../components/WeeklyLogsTimeline'
 import { WeeklyOverviewCards } from '../components/WeeklyOverviewCards'
@@ -25,7 +26,9 @@ function resolveErrorMessage(error: unknown) {
 }
 
 export function AttendanceHistoryPage() {
-  const { data, isLoading, isError, error, refetch } = useGetWeeklyAttendanceHistoryQuery()
+  const [page, setPage] = useState(0)
+  const { data, isLoading, isError, error, refetch, isFetching } =
+    useGetWeeklyAttendanceHistoryQuery({ page, size: 7 })
 
   if (isLoading) {
     return (
@@ -48,7 +51,6 @@ export function AttendanceHistoryPage() {
           <button
             type="button"
             onClick={() => {
-              toast.dismiss()
               refetch()
             }}
             className="mt-5 h-11 rounded-full bg-[#2d63cb] px-5 text-sm font-semibold text-white"
@@ -65,6 +67,18 @@ export function AttendanceHistoryPage() {
       <div className="mx-auto max-w-md px-4 py-5">
         <AttendanceHeader />
         <WeeklyOverviewCards summary={data.summary} />
+        <AttendanceHistoryPagination
+          currentPage={data.pagination.page}
+          hasPrevious={data.pagination.hasPrevious}
+          hasNext={data.pagination.hasNext}
+          onPrevious={() => setPage((currentPage) => Math.max(currentPage - 1, 0))}
+          onNext={() => setPage((currentPage) => currentPage + 1)}
+        />
+        {isFetching ? (
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Loading another week...
+          </p>
+        ) : null}
         {data.logs.length > 0 ? (
           <WeeklyLogsTimeline logs={data.logs} />
         ) : (

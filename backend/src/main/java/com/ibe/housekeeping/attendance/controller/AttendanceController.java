@@ -49,8 +49,10 @@ public class AttendanceController {
     @GetMapping("/weekly-history")
     public WeeklyAttendanceHistoryResponse getWeeklyHistory(
             Authentication authentication,
-            @RequestParam(required = false) LocalDate weekStart
+            @RequestParam(required = false) LocalDate weekStart,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "7") int size
     ) {
-        return attendanceHistoryService.getWeeklyHistory(authentication.getName(), weekStart);
+        return attendanceHistoryService.getWeeklyHistory(authentication.getName(), weekStart, page, size);
     }
 }

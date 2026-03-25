@@ -2,6 +2,7 @@ package com.ibe.housekeeping.attendance.service;
 
 import com.ibe.housekeeping.attendance.dto.WeeklyAttendanceHistoryResponse;
 import com.ibe.housekeeping.attendance.dto.WeeklyAttendanceLogItemResponse;
+import com.ibe.housekeeping.attendance.dto.WeeklyAttendancePaginationResponse;
 import com.ibe.housekeeping.attendance.dto.WeeklyAttendanceSummaryResponse;
 import com.ibe.housekeeping.attendance.repository.AttendanceRepository;
 import com.ibe.housekeeping.auth.repository.UserRepository;
@@ -41,9 +42,17 @@ public class AttendanceHistoryService {
     }
 
     @Transactional(readOnly = true)
-    public WeeklyAttendanceHistoryResponse getWeeklyHistory(String username, LocalDate requestedWeekStart) {
+    public WeeklyAttendanceHistoryResponse getWeeklyHistory(String username, LocalDate requestedWeekStart, int page, int size) {
         StaffProfile staffProfile = loadStaffProfile(username);
-        LocalDate weekStart = resolveWeekStart(requestedWeekStart);
+        if (page < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Page must be zero or greater.");
+        }
+
+        if (size <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Size must be greater than zero.");
+        }
+
+        LocalDate weekStart = resolveWeekStart(requestedWeekStart, page);
         LocalDate weekEnd = weekStart.plusDays(6);
 
         List<Attendance> attendances = attendanceRepository
@@ -65,11 +74,22 @@ public class AttendanceHistoryService {
 
         int totalBreakMinutes = Math.max(attendances.size() * 45, 0);
 
+        LocalDate earliestWeekStart = attendanceRepository.findTopByStaffIdOrderByWorkDateAscClockInTimeAsc(staffProfile.getId())
+                .map(Attendance::getWorkDate)
+                .map(date -> date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)))
+                .orElse(weekStart);
+
         return new WeeklyAttendanceHistoryResponse(
                 weekStart,
                 weekEnd,
                 new WeeklyAttendanceSummaryResponse(totalWorkedMinutes, overtimeMinutes, totalBreakMinutes),
-                logs
+                logs,
+                new WeeklyAttendancePaginationResponse(
+                        page,
+                        size,
+                        page > 0,
+                        weekStart.isAfter(earliestWeekStart)
+                )
         );
     }
 
@@ -81,8 +101,8 @@ public class AttendanceHistoryService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Staff profile not found for this user."));
     }
 
-    private LocalDate resolveWeekStart(LocalDate requestedWeekStart) {
-        LocalDate anchorDate = requestedWeekStart != null ? requestedWeekStart : LocalDate.now();
+    private LocalDate resolveWeekStart(LocalDate requestedWeekStart, int page) {
+        LocalDate anchorDate = requestedWeekStart != null ? requestedWeekStart : LocalDate.now().minusWeeks(page);
         return anchorDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
     }
 

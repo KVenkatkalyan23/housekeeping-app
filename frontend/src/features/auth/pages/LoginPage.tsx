@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 
 import type { RootState } from "../../../app/store";
 import { LoginForm } from "../components/LoginForm";
-import { getDefaultRouteForRole } from '../routing'
+import { getDefaultRouteForRole } from "../routing";
 
 function BrandMark() {
   return (
@@ -38,14 +38,14 @@ export function LoginPage() {
   const isAuthenticated = useSelector(
     (state: RootState) => state.auth.isAuthenticated,
   );
-  const role = useSelector((state: RootState) => state.auth.role)
+  const role = useSelector((state: RootState) => state.auth.role);
 
   if (isAuthenticated) {
     return <Navigate to={getDefaultRouteForRole(role)} replace />;
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(96,165,250,0.22),_transparent_30%),linear-gradient(180deg,#f8fbff_0%,#eef4fb_100%)] px-4 py-5 text-slate-700 sm:px-6 sm:py-8 lg:px-10 xl:px-16">
+    <main className="relative min-h-screen max-md:h-full overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(96,165,250,0.22),_transparent_30%),linear-gradient(180deg,#f8fbff_0%,#eef4fb_100%)] px-4 py-5 text-slate-700 sm:px-6 sm:py-8 lg:px-10 xl:px-16">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-[-8rem] top-[-5rem] h-56 w-56 rounded-full bg-blue-200/35 blur-3xl sm:h-72 sm:w-72" />
         <div className="absolute bottom-[-7rem] right-[-4rem] h-64 w-64 rounded-full bg-cyan-100/70 blur-3xl sm:h-80 sm:w-80" />

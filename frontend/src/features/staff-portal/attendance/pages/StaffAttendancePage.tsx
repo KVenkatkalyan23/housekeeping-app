@@ -1,37 +1,37 @@
-import { useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-import { toast } from 'react-toastify'
+import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-toastify";
 
-import type { AppDispatch, RootState } from '../../../app/store'
-import { clearPersistedAuthState, logout } from '../../auth/slice'
+import type { AppDispatch, RootState } from "../../../../app/store";
+import { clearPersistedAuthState, logout } from "../../../auth/slice";
 import {
   useClockInMutation,
   useClockOutMutation,
   useGetCurrentAttendanceQuery,
-} from '../api'
-import { BottomNav } from '../components/BottomNav'
-import { ClockControls } from '../components/ClockControls'
-import { LeaveSection } from '../components/LeaveSection'
-import { LogoutConfirmModal } from '../components/LogoutConfirmModal'
-import { ShiftStatusCard } from '../components/ShiftStatusCard'
-import { TodayTasksSection } from '../components/TodayTasksSection'
+} from "../api";
+import { BottomNav } from "../components/BottomNav";
+import { ClockControls } from "../components/ClockControls";
+import { LeaveSection } from "../components/LeaveSection";
+import { LogoutConfirmModal } from "../components/LogoutConfirmModal";
+import { ShiftStatusCard } from "../components/ShiftStatusCard";
+import { TodayTasksSection } from "../components/TodayTasksSection";
 
 function resolveErrorMessage(error: unknown) {
-  if (!error || typeof error !== 'object') {
-    return 'Something went wrong. Please try again.'
+  if (!error || typeof error !== "object") {
+    return "Something went wrong. Please try again.";
   }
 
   const candidate = error as {
-    data?: { message?: string; error?: { message?: string } }
-    error?: string
-  }
+    data?: { message?: string; error?: { message?: string } };
+    error?: string;
+  };
 
   return (
     candidate.data?.message ??
     candidate.data?.error?.message ??
     candidate.error ??
-    'Something went wrong. Please try again.'
-  )
+    "Something went wrong. Please try again."
+  );
 }
 
 function PortalHeader({
@@ -39,9 +39,9 @@ function PortalHeader({
   status,
   onLogout,
 }: {
-  username: string | null
-  status: string
-  onLogout: () => void
+  username: string | null;
+  status: string;
+  onLogout: () => void;
 }) {
   return (
     <header className="flex items-start justify-between gap-4">
@@ -53,7 +53,8 @@ function PortalHeader({
           Staff Portal
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Current duty status: <span className="font-semibold text-slate-700">{status}</span>
+          Current duty status:{" "}
+          <span className="font-semibold text-slate-700">{status}</span>
         </p>
       </div>
 
@@ -80,7 +81,7 @@ function PortalHeader({
           </svg>
         </button>
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#e7f0ff] text-sm font-semibold text-[#1664c0] shadow-[0_12px_25px_rgba(15,23,42,0.08)]">
-          {(username ?? 'S').slice(0, 1).toUpperCase()}
+          {(username ?? "S").slice(0, 1).toUpperCase()}
         </div>
         <button
           type="button"
@@ -91,58 +92,58 @@ function PortalHeader({
         </button>
       </div>
     </header>
-  )
+  );
 }
 
 export function StaffAttendancePage() {
-  const dispatch = useDispatch<AppDispatch>()
-  const username = useSelector((state: RootState) => state.auth.username)
+  const dispatch = useDispatch<AppDispatch>();
+  const username = useSelector((state: RootState) => state.auth.username);
   const { data, isLoading, isFetching, isError, error, refetch } =
-    useGetCurrentAttendanceQuery()
-  const [clockIn, { isLoading: isClockingIn }] = useClockInMutation()
-  const [clockOut, { isLoading: isClockingOut }] = useClockOutMutation()
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const [showClockOutConfirm, setShowClockOutConfirm] = useState(false)
+    useGetCurrentAttendanceQuery();
+  const [clockIn, { isLoading: isClockingIn }] = useClockInMutation();
+  const [clockOut, { isLoading: isClockingOut }] = useClockOutMutation();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showClockOutConfirm, setShowClockOutConfirm] = useState(false);
 
   const handleLogout = () => {
     if (data?.onDuty) {
-      setShowLogoutConfirm(true)
-      return
+      setShowLogoutConfirm(true);
+      return;
     }
 
-    clearPersistedAuthState()
-    dispatch(logout())
-  }
+    clearPersistedAuthState();
+    dispatch(logout());
+  };
 
   const confirmLogout = () => {
-    setShowLogoutConfirm(false)
-    clearPersistedAuthState()
-    dispatch(logout())
-  }
+    setShowLogoutConfirm(false);
+    clearPersistedAuthState();
+    dispatch(logout());
+  };
 
   const handleClockIn = async () => {
     try {
-      await clockIn().unwrap()
-      toast.success('Clock-in successful.')
+      await clockIn().unwrap();
+      toast.success("Clock-in successful.");
     } catch (mutationError) {
-      toast.error(resolveErrorMessage(mutationError))
+      toast.error(resolveErrorMessage(mutationError));
     }
-  }
+  };
 
   const confirmClockOut = async () => {
-    setShowClockOutConfirm(false)
+    setShowClockOutConfirm(false);
 
     try {
-      await clockOut().unwrap()
-      toast.success('Clock-out successful.')
+      await clockOut().unwrap();
+      toast.success("Clock-out successful.");
     } catch (mutationError) {
-      toast.error(resolveErrorMessage(mutationError))
+      toast.error(resolveErrorMessage(mutationError));
     }
-  }
+  };
 
   const handleClockOut = () => {
-    setShowClockOutConfirm(true)
-  }
+    setShowClockOutConfirm(true);
+  };
 
   if (isLoading) {
     return (
@@ -154,15 +155,19 @@ export function StaffAttendancePage() {
           <div className="h-36 rounded-[1.75rem] bg-white" />
         </div>
       </main>
-    )
+    );
   }
 
   if (isError || !data) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f4f3f8] px-4">
         <div className="w-full max-w-sm rounded-[1.75rem] bg-white p-6 text-center shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
-          <h1 className="text-xl font-semibold text-slate-900">Unable to load attendance</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-500">{resolveErrorMessage(error)}</p>
+          <h1 className="text-xl font-semibold text-slate-900">
+            Unable to load attendance
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            {resolveErrorMessage(error)}
+          </p>
           <button
             type="button"
             onClick={() => refetch()}
@@ -172,7 +177,7 @@ export function StaffAttendancePage() {
           </button>
         </div>
       </main>
-    )
+    );
   }
 
   return (
@@ -181,7 +186,7 @@ export function StaffAttendancePage() {
         <div className="mx-auto max-w-md px-3 py-5">
           <PortalHeader
             username={username}
-            status={data.onDuty ? 'On Duty' : 'Off Duty'}
+            status={data.onDuty ? "On Duty" : "Off Duty"}
             onLogout={handleLogout}
           />
 
@@ -223,5 +228,5 @@ export function StaffAttendancePage() {
         onConfirm={confirmClockOut}
       />
     </>
-  )
+  );
 }

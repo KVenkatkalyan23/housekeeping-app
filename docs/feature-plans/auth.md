@@ -294,27 +294,6 @@ Add backend configuration for:
 
 ---
 
-## Testing
-
-### Backend
-
-- login success
-- login failure
-- create user success by ADMIN
-- create user forbidden for STAFF
-- protected endpoint without token returns 401
-- protected endpoint with invalid token returns 401
-
-### Frontend
-
-- login success stores token and user data
-- invalid login shows error
-- protected route redirects without token
-- logout clears state and storage
-- app restores auth state from localStorage on refresh
-
----
-
 ## Done Criteria
 
 - login API works
