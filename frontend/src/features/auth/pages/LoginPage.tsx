@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 
 import type { RootState } from "../../../app/store";
 import { LoginForm } from "../components/LoginForm";
+import { getDefaultRouteForRole } from '../routing'
 
 function BrandMark() {
   return (
@@ -37,9 +38,10 @@ export function LoginPage() {
   const isAuthenticated = useSelector(
     (state: RootState) => state.auth.isAuthenticated,
   );
+  const role = useSelector((state: RootState) => state.auth.role)
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={getDefaultRouteForRole(role)} replace />;
   }
 
   return (
