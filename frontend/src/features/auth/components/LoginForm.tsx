@@ -91,7 +91,6 @@ export function LoginForm() {
   const [login, { isLoading }] = useLoginMutation()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [rememberMe, setRememberMe] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -180,16 +179,7 @@ export function LoginForm() {
         </label>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <label className="flex items-center gap-3 text-sm text-slate-500 sm:text-[15px]">
-          <input
-            type="checkbox"
-            checked={rememberMe}
-            onChange={(event) => setRememberMe(event.target.checked)}
-            className="h-5 w-5 rounded border border-slate-300 text-blue-500 focus:ring-2 focus:ring-blue-200"
-          />
-          <span>Remember me</span>
-        </label>
+      <div className="flex justify-end">
         <Link
           to="/login"
           className="text-sm font-medium text-blue-500 underline underline-offset-2 sm:text-[15px]"
