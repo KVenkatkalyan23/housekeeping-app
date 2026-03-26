@@ -2,21 +2,20 @@
 
 ## Goal
 
-Implement task allocation logic that assigns generated cleaning tasks to staff fairly and correctly, while deciding the shift during allocation, respecting time windows, staff capacity, and workload balancing rules.
+Implement task allocation so generated cleaning tasks are assigned fairly and correctly while allowing staff to split their 4-hour workday across morning and afternoon windows. Tasks are atomic: once a staff member starts a task, that task must be completed by the same staff member.
 
 ---
 
 ## Scope
 
-- allocate generated tasks to staff
-- assign `shift_id` during allocation
+- allocate generated cleaning tasks to staff
+- allow staff to work across morning and afternoon windows on the same day
+- keep tasks atomic (no task splitting across staff)
+- respect total daily capacity per staff = 240 minutes
+- decide task shift during allocation
 - create task assignments
-- support morning and afternoon shift allocation
-- enforce deep-clean time window rules
-- enforce 4-hour max work per staff per shift
-- distribute work evenly
-- avoid repeatedly assigning more work to the same people
-- support unassigned tasks when capacity is insufficient
+- prefer assigning staff into their preferred shift when possible
+- allow overriding preferred shift when shortage exists
 - expose allocation API
 - expose API to fetch allocation result
 
@@ -28,7 +27,8 @@ Implement task allocation logic that assigns generated cleaning tasks to staff f
 - backend allocation API
 - backend fetch assignments API
 - backend fairness logic
-- backend shift/time-window allocation logic
+- backend time-window-aware allocation logic
+- preferred-shift-aware candidate selection
 - frontend screen to trigger allocation
 - frontend allocation result view
 - loading/error/empty states
@@ -37,199 +37,205 @@ Implement task allocation logic that assigns generated cleaning tasks to staff f
 
 ## Out of Scope
 
-- relocation
 - manual reassignment
-- shortfall feature implementation
-- attendance history
-- dashboard aggregation
-- auto shift rotation engine
-- multi-shift staff split in a single day
+- relocation
+- leave approval flow
+- dashboard analytics
+- payroll
+- overtime approvals
+
+---
+
+## Core Clarification
+
+- staff are not restricted to exactly one full shift block
+- staff can split their 4-hour daily capacity across morning and afternoon windows
+- tasks are atomic
+- if a staff member starts a task, assume they complete it
+- no task can be split between multiple staff
+
+---
+
+## Required Data Model Change
+
+### Staff Profile Field Change
+
+Change:
+
+- `current_shift_id`
+
+To:
+
+- `preferred_shift_id`
+
+### Meaning
+
+- `preferred_shift_id` is a soft preference, not a hard allocation rule
+- system should first try to allocate staff into work that matches their preferred shift
+- system may override the preferred shift when needed to avoid shortage/unassigned tasks
+
+### Files Affected by This Change
+
+#### backend/staff/entity/
+
+- `StaffProfile.java`
+
+#### backend/staff/repository/
+
+- `StaffProfileRepository.java`
+
+#### backend resources / migrations
+
+- add migration to rename or replace `current_shift_id` with `preferred_shift_id`
+
+#### any DTOs using current shift
+
+- update to preferred shift naming if applicable
 
 ---
 
 ## Core Business Rules
 
-### Shift Windows
+### Cleaning Task Types
 
-- Morning shift: `08:00 - 12:00`
-- Afternoon shift: `13:00 - 17:00`
+- `DEEP_CLEAN` = 120 minutes
+- `DAILY_CLEAN` = 30 minutes
+- `VACANT_CLEAN` = 15 minutes
 
 ### Hotel Timing Rules
 
-- Checkout time: `10:00`
-- Check-in time: `15:00`
+- checkout time = `10:00`
+- check-in time = `15:00`
+
+### Working Windows
+
+- Morning window: `08:00 - 12:00`
+- Afternoon window: `13:00 - 17:00`
 
 ### Deep Clean Allowed Windows
 
-Deep cleaning can only happen after checkout and before next check-in.
-
-- Morning deep clean window: `10:00 - 12:00`
-- Afternoon deep clean window: `13:00 - 15:00`
+- Morning deep-clean window: `10:00 - 12:00`
+- Afternoon deep-clean window: `13:00 - 15:00`
 
 ### Remaining Task Windows
 
-Other tasks can use the remaining shift hours.
+- Morning general window: `08:00 - 10:00`
+- Afternoon general window: `15:00 - 17:00`
 
-- Morning remaining window: `08:00 - 10:00`
-- Afternoon remaining window: `15:00 - 17:00`
+### Total Staff Capacity
 
-### Task Types and Duration
+- each staff member has total daily capacity = `240 minutes`
 
-- `DEEP_CLEAN` → `120` minutes
-- `DAILY_CLEAN` → `30` minutes
-- `VACANT_CLEAN` → `15` minutes
+### Atomic Task Rule
 
-### Task Priority
+- one task must be assigned to one staff member only
+- no task splitting across staff
 
-- `DEEP_CLEAN` → priority `1`
-- `DAILY_CLEAN` → priority `2`
-- `VACANT_CLEAN` → priority `3`
+### Preferred Shift Rule
 
-### Staff Work Rules
+- staff should be allocated to work matching their `preferred_shift_id` whenever possible
+- preferred shift is a soft preference
+- if demand cannot be met using preferred-shift-aligned staff, system may allocate staff into the other shift/window
 
-- one staff works in only one shift for allocation
-- no partial split across morning and afternoon
-- max workload per staff per shift = `240` minutes
-- allocation must be done separately per shift
+### Shortage Override Rule
 
-### Fairness Rules
+Preferred shift may be overridden when:
 
-To divide work evenly:
+- there is no feasible preferred-shift candidate for a task
+- required work would otherwise remain unassigned
+- there is insufficient capacity in the preferred shift pool
 
-1. prefer staff with lower currently allocated minutes in that shift
-2. if tie, prefer staff with lower historical total minutes/hours worked
-3. if still tie, use stable tie-breaker (e.g. `staffId`)
+### Fairness Rule
 
-### Historical Workload
+When multiple staff are eligible, choose in this order:
 
-Introduce and use a field in `staff_profiles`:
-
-- `total_minutes_worked`
-  or
-- `total_hours_worked`
-
-Recommended:
-
-- `total_minutes_worked`
-
-This field is used only for fairness tie-breaking, not for daily shift capacity.
-
-### Shift Assignment Rule
-
-- tasks are generated with `shift_id = null`
-- during allocation, selected shift is assigned to the task
-- allocation input must include:
-  - `taskDate`
-  - `shiftId`
+1. preferred-shift match first, if feasible
+2. lower currently allocated minutes for the day
+3. lower historical total minutes worked
+4. fewer assigned tasks today
+5. stable tie-breaker
 
 ---
 
-## Allocation Strategy
+## Allocation Model
 
-### High-Level Strategy
+## High-Level Model
 
-Run allocation per shift.
+For a given `taskDate`:
 
-For a given `taskDate` and `shiftId`:
-
-1. fetch unassigned tasks for the date
-2. fetch eligible staff for the selected shift
-3. separate tasks by type
-4. allocate `DEEP_CLEAN` tasks first
-5. allocate remaining `DAILY_CLEAN` and `VACANT_CLEAN` tasks next
-6. persist assignments
-7. leave overflow tasks unassigned
-
-### Recommended Algorithm
-
-Use a greedy, capacity-aware, priority-first allocator.
-
-For each task:
-
-- find eligible staff who can still fit the task into remaining capacity
-- sort candidates by:
-  1. lowest allocated minutes in current shift
-  2. lowest historical total minutes worked
-  3. stable tie-breaker
-- assign task to first valid candidate
-
-### Why This Algorithm
-
-- simple to implement
-- deterministic
-- easy to debug
-- fair enough for sprint scope
-- works with current business rules
+1. fetch all generated unassigned tasks
+2. fetch all eligible staff
+3. allocate deep clean tasks first
+4. allocate remaining daily/vacant tasks next
+5. prefer candidates whose preferred shift matches the selected window
+6. if shortage exists, allow cross-preference allocation
+7. assign each task to one staff member and a valid window
+8. update task with `shift_id`
+9. create `TaskAssignment`
+10. leave tasks unassigned if no feasible placement exists
 
 ---
 
-## Deep Clean Allocation Logic
+## Important Feasibility Rules
 
-### Rule
+### Deep Clean Feasibility
 
-Allocate deep clean tasks first because:
+A deep clean takes 120 minutes.
+It can fit in:
 
-- they are highest priority
-- they have strict allowed time windows
-- they consume full 120 minutes
+- morning deep-clean window: `10:00 - 12:00`
+- afternoon deep-clean window: `13:00 - 15:00`
 
-### Practical Implication
+### Daily / Vacant Feasibility
 
-Within a deep-clean window:
+These can be assigned into:
 
-- one staff can typically take only one deep clean task in that window
-- if there are more deep clean tasks than available staff capacity, some tasks remain unassigned
+- `08:00 - 10:00`
+- `15:00 - 17:00`
 
-### Morning Example
+### Daily Capacity Rule
 
-- deep clean window = `10:00 - 12:00`
-- one deep clean = `120 min`
-- one staff can handle one deep clean in this window
+For each staff member:
 
-### Afternoon Example
-
-- deep clean window = `13:00 - 15:00`
-- one deep clean = `120 min`
-- one staff can handle one deep clean in this window
-
-### Rule to Enforce
-
-Do not assign a deep clean to a staff member if:
-
-- they already have another deep clean in the same shift
-  or
-- their remaining capacity is less than 120 minutes
+- total assigned minutes across all windows for that day must be `<= 240`
 
 ---
 
-## Daily and Vacant Allocation Logic
+## Internal Time Buckets
 
-### Rule
+### Bucket A
 
-After deep clean allocation:
+- `08:00 - 10:00`
+- duration = `120`
+- allowed task types:
+  - `DAILY_CLEAN`
+  - `VACANT_CLEAN`
+- shift = Morning
 
-- allocate `DAILY_CLEAN`
-- allocate `VACANT_CLEAN`
+### Bucket B
 
-### Allowed Time Use
+- `10:00 - 12:00`
+- duration = `120`
+- allowed task types:
+  - `DEEP_CLEAN`
+- shift = Morning
 
-- Morning: `08:00 - 10:00`
-- Afternoon: `15:00 - 17:00`
+### Bucket C
 
-### Practical Rule
+- `13:00 - 15:00`
+- duration = `120`
+- allowed task types:
+  - `DEEP_CLEAN`
+- shift = Afternoon
 
-These tasks should fill remaining shift capacity after deep clean priority has been handled.
+### Bucket D
 
-### Ordering
-
-Recommended order after deep clean:
-
-1. `DAILY_CLEAN`
-2. `VACANT_CLEAN`
-
-Within same type:
-
-- assign to least-loaded eligible staff first
+- `15:00 - 17:00`
+- duration = `120`
+- allowed task types:
+  - `DAILY_CLEAN`
+  - `VACANT_CLEAN`
+- shift = Afternoon
 
 ---
 
@@ -250,7 +256,7 @@ Within same type:
 - `RunAllocationRequest.java`
 - `RunAllocationResponse.java`
 - `TaskAssignmentItemResponse.java`
-- `AllocationResultSummaryResponse.java`
+- `UnassignedTaskItemResponse.java`
 
 #### allocation/repository/
 
@@ -277,11 +283,21 @@ Within same type:
 #### staff/entity/
 
 - reuse existing `StaffProfile.java`
-- reuse existing `AvailabilityStatus.java`
+- update field from `currentShift` to `preferredShift`
+- reuse fairness field:
+  - `totalMinutesWorked`
 
 #### shift/repository/
 
 - `ShiftRepository.java`
+
+#### leave/repository/
+
+- `LeaveRequestRepository.java` if excluding staff on leave for selected date
+
+#### migrations/
+
+- migration to replace `current_shift_id` with `preferred_shift_id`
 
 ---
 
@@ -300,7 +316,7 @@ Within same type:
 
 #### routes/
 
-- update admin/allocation routes
+- update admin allocation routes
 
 #### shared/api/
 
@@ -341,10 +357,9 @@ Must support:
 Must support:
 
 - `id`
-- `user`
-- `currentShift`
 - `availabilityStatus`
-- `totalMinutesWorked` or equivalent fairness field
+- `preferredShift`
+- `totalMinutesWorked`
 
 ### Important Rule
 
@@ -361,50 +376,283 @@ During allocation:
 
 Purpose:
 
-- run allocation for a selected date and shift
+- run allocation for a selected date
 
 #### Request
 
 ```json
 {
-  "taskDate": "2026-03-26",
-  "shiftId": "uuid"
+  "taskDate": "2026-03-26"
 }
 Response
 
 Should include:
 
-total task count
-assigned task count
-unassigned task count
-assignment list
-unassigned task list
-selected shift info
-
-Example:
-
-{
-  "taskDate": "2026-03-26",
-  "shiftId": "uuid",
-  "totalTasks": 20,
-  "assignedTasks": 16,
-  "unassignedTasks": 4,
-  "assignments": [],
-  "unassigned": []
-}
+taskDate
+totalTasks
+assignedTasks
+unassignedTasks
+assignments
+unassigned
 GET /api/allocation
 
+Purpose:
 
-Done Criteria
-allocation runs for selected date and shift
-deep clean tasks are assigned first
-shift is assigned during allocation
-one staff works in only one shift
-no staff exceeds 240 minutes
-work is distributed evenly
-historical total minutes worked is considered for fairness
-tasks are assigned to staff correctly
+fetch allocation results for a selected date
+Query Params
+taskDate required
+Task Ordering Rules
+Phase 1: Deep Clean
+
+Allocate all DEEP_CLEAN tasks first.
+
+Phase 2: Daily/Vacant
+
+Allocate remaining:
+
+DAILY_CLEAN
+then VACANT_CLEAN
+Staff Eligibility Rules
+
+A staff member is eligible if:
+
+active staff profile exists
+available for work
+not on leave for selected date
+has enough remaining total daily capacity
+has enough capacity in a valid bucket for the task type
+Staff Load Tracking
+
+Track in memory during allocation:
+
+Per Staff
+totalAllocatedMinutesForDay
+allocatedTaskCountForDay
+bucketACapacityUsed
+bucketBCapacityUsed
+bucketCCapacityUsed
+bucketDCapacityUsed
+Bucket Capacity Limits
+A max = 120
+B max = 120
+C max = 120
+D max = 120
+Total Daily Limit
+total across all buckets must not exceed 240
+Preferred Shift Aware Placement Rules
+Preferred Shift Matching
+
+For each feasible candidate, determine whether the chosen bucket matches preferred shift:
+
+Morning preferred shift matches:
+bucket A
+bucket B
+Afternoon preferred shift matches:
+bucket C
+bucket D
+Selection Strategy
+
+For each task:
+
+build all feasible candidate + bucket combinations
+split them into:
+preferred-shift-matching candidates
+non-matching candidates
+if preferred-shift-matching candidates exist, choose from them first
+if none exist and task would otherwise remain unassigned, use non-matching candidates
+Why
+
+This ensures:
+
+staff preference is respected where possible
+system can still override preference to avoid shortage
+Candidate Selection Rules
+
+For each task:
+
+generate feasible candidate staff + bucket combinations
+discard any candidate that breaks bucket capacity or daily capacity
+prefer candidates whose preferred shift matches the chosen bucket
+then sort by:
+lowest total allocated minutes today
+lowest historical total minutes worked
+fewest tasks assigned today
+stable tie-breaker
+choose best candidate
+Unassigned Task Rules
+
+Leave a task unassigned if:
+
+no eligible staff can fit it in a valid bucket
+no valid bucket remains
+all staff are at 240 daily minutes
+
+Recommended:
+
+do not set shift_id if task remains unassigned
+Repository Requirements
+CleaningTaskRepository
+
+Need:
+
+fetch unassigned tasks by date
+fetch allocated tasks by date
+StaffProfileRepository
+
+Need:
+
+fetch eligible staff
+include preferred_shift_id
+include fairness field
+optionally exclude leave/sick/off-duty
+TaskAssignmentRepository
+
+Need:
+
+save assignments
+fetch assignments by date
+ShiftRepository
+
+Need:
+
+resolve morning shift id
+resolve afternoon shift id
+LeaveRequestRepository
+
+Need:
+
+exclude staff on leave for selected date if leave feature exists
+Backend Validation
+taskDate required
+task estimated minutes must be valid
+task type must be known
+staff must exist
+no staff may exceed 240 total minutes
+preferred shift is soft, not mandatory
+Error Handling
+
+Handle:
+
+invalid date
+missing shift records
+bad task data
+repository failure
+duplicate assignment attempt
+
+Recommended:
+
+continue allocation for valid tasks when one task is invalid
+return assigned/unassigned summary
+Frontend UI Requirements
+Allocation Page
+
+Implement:
+
+page title
+date picker
+run allocation button
+allocation summary
+assigned tasks list
+unassigned tasks list
+Assignment List
+
+Show:
+
+room number
+task type
+staff name
+estimated minutes
+assigned shift
+whether preferred shift was respected (optional badge)
+UI States
+
+Handle:
+
+loading during allocation
+loading during fetch
+empty state
+error state
+success feedback
+Frontend API Integration
+allocation/api.ts
+
+Implement:
+
+runAllocation(taskDate)
+getAllocation(taskDate)
+Suggested Implementation Sequence
+add migration to rename/replace current_shift_id with preferred_shift_id
+update StaffProfile entity and repository
+confirm nullable shift_id on generated tasks
+add/confirm fairness field on staff profile
+resolve morning and afternoon shift ids
+implement staff bucket model in allocation service
+implement preferred-shift-aware candidate selection
+implement shortage override logic
+implement deep-clean allocation first pass
+implement daily/vacant allocation second pass
+set shift_id based on chosen bucket
+create TaskAssignment rows
+expose POST allocation API
+expose GET allocation result API
+implement frontend allocation page
+integrate and test
+Edge Cases
+Preferred Shift Enough
+matching preferred-shift candidates exist
+use them first
+Preferred Shift Shortage
+no feasible preferred-shift candidate exists
+use non-matching candidate to avoid unassigned task
+Exact Fit
+staff has exactly enough room in bucket/daily capacity
+assign successfully
+Deep Clean Overflow
+more deep cleans than valid deep-clean capacity
+leave overflow unassigned
+Daily/Vacant Overflow
+remaining general bucket capacity exhausted
+leave overflow unassigned
+Mixed Day
+one staff can take morning + afternoon tasks
+total must still be <= 240
+No Staff
+all tasks unassigned
+Leave Conflict
+exclude leave staff
+Duplicate Assignment
+same task cannot get multiple assignments
+Testing
+Backend
+
+Test:
+
+preferred-shift-matching staff are chosen first
+preferred shift is overridden when needed to avoid unassigned tasks
+deep clean assigned only in B or C window
+daily/vacant assigned only in A or D window
+one task is assigned to exactly one staff
+total staff daily minutes never exceed 240
+fairness uses historical total minutes as tie-breaker
+shift_id is set according to chosen bucket
 unassigned tasks remain visible
-allocation results can be fetched and displayed
-loading/error/empty states are handled
+Frontend
+
+Test:
+
+run allocation triggers API
+assigned list renders
+unassigned list renders
+loading/error/empty states work
+Done Criteria
+current_shift is replaced by preferred_shift
+preferred shift is respected when possible
+preferred shift can be overridden when shortage exists
+allocation runs for selected date
+staff can work across morning and afternoon windows
+tasks remain atomic
+no staff exceeds 240 minutes total per day
+shift_id is assigned during allocation
+assignments are created correctly
+unassigned tasks remain visible
 ```

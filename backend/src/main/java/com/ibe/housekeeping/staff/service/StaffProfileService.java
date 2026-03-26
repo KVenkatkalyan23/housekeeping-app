@@ -40,7 +40,7 @@ public class StaffProfileService {
                 staffProfile.getFullName(),
                 staffProfile.getEmail(),
                 staffProfile.getPhone(),
-                formatShift(staffProfile.getCurrentShift()),
+                formatShift(staffProfile.getPreferredShift()),
                 "North Suites, Floor 4-6",
                 staffProfile.getAvailabilityStatus()
         );

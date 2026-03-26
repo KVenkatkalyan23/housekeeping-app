@@ -32,7 +32,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Table(
         name = "staff_profiles",
         indexes = {
-                @Index(name = "idx_staff_profiles_shift_status", columnList = "current_shift_id, availability_status")
+                @Index(name = "idx_staff_profiles_shift_status", columnList = "preferred_shift_id, availability_status")
         }
 )
 @Getter
@@ -66,8 +66,8 @@ public class StaffProfile {
     private String email;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "current_shift_id")
-    private Shift currentShift;
+    @JoinColumn(name = "preferred_shift_id")
+    private Shift preferredShift;
 
     @Builder.Default
     @NotNull

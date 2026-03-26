@@ -66,7 +66,7 @@ public class StaffBootstrapConfig {
             staffProfile.setFullName("Staff Member %02d".formatted(index + 1));
             staffProfile.setPhone("+15550000%02d".formatted(index + 1));
             staffProfile.setEmail("staff%02d@housekeeping.local".formatted(index + 1));
-            staffProfile.setCurrentShift(shift);
+            staffProfile.setPreferredShift(shift);
             staffProfile.setAvailabilityStatus(AvailabilityStatus.OFF_DUTY);
 
             staffProfileRepository.save(staffProfile);

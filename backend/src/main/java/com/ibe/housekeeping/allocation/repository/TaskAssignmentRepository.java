@@ -36,6 +36,22 @@ public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, 
             join fetch task.room room
             join fetch task.shift shift
             left join fetch assignment.staff staff
+            left join fetch staff.preferredShift preferredShift
+            where task.taskDate = :taskDate
+            order by task.priorityOrder asc, room.roomNumber asc, task.id asc
+            """)
+    List<TaskAssignment> findAllByTaskDate(
+            @Param("taskDate") LocalDate taskDate
+    );
+
+    @Query("""
+            select assignment
+            from TaskAssignment assignment
+            join fetch assignment.cleaningTask task
+            join fetch task.room room
+            join fetch task.shift shift
+            left join fetch assignment.staff staff
+            left join fetch staff.preferredShift preferredShift
             where task.taskDate = :taskDate
               and shift.id in :shiftIds
             order by task.priorityOrder asc, room.roomNumber asc, task.id asc

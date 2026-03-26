@@ -47,7 +47,7 @@ public class AttendanceService {
     @Transactional
     public ClockInResponse clockIn(String username) {
         StaffProfile staffProfile = loadStaffProfile(username);
-        Shift shift = requireCurrentShift(staffProfile);
+        Shift shift = requirePreferredShift(staffProfile);
 
         Attendance activeAttendance = loadSingleActiveAttendance(staffProfile, true);
         if (activeAttendance != null) {
@@ -124,8 +124,8 @@ public class AttendanceService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Staff profile not found for this user."));
     }
 
-    private Shift requireCurrentShift(StaffProfile staffProfile) {
-        Shift shift = staffProfile.getCurrentShift();
+    private Shift requirePreferredShift(StaffProfile staffProfile) {
+        Shift shift = staffProfile.getPreferredShift();
         if (shift == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No shift assigned to this staff profile.");
         }
@@ -151,7 +151,7 @@ public class AttendanceService {
     }
 
     private AttendanceStatusResponse toStatusResponse(StaffProfile staffProfile, Attendance activeAttendance) {
-        Shift shift = staffProfile.getCurrentShift();
+        Shift shift = staffProfile.getPreferredShift();
 
         return new AttendanceStatusResponse(
                 activeAttendance != null,
