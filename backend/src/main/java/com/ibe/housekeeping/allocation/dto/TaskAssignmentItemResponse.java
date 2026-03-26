@@ -12,6 +12,7 @@ public record TaskAssignmentItemResponse(
         String staffName,
         UUID shiftId,
         String shiftCode,
-        String shiftName
+        String shiftName,
+        boolean preferredShiftMatched
 ) {
 }

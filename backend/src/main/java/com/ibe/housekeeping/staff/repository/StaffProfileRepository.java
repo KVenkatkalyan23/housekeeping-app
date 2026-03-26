@@ -10,5 +10,7 @@ public interface StaffProfileRepository extends JpaRepository<StaffProfile, UUID
 
     Optional<StaffProfile> findByUserId(UUID userId);
 
-    List<StaffProfile> findAllByCurrentShiftIdOrderByIdAsc(UUID shiftId);
+    List<StaffProfile> findAllByOrderByIdAsc();
+
+    List<StaffProfile> findAllByPreferredShiftIdOrderByIdAsc(UUID shiftId);
 }

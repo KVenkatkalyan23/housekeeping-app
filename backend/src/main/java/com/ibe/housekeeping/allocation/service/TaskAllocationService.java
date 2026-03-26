@@ -5,7 +5,6 @@ import com.ibe.housekeeping.allocation.dto.RunAllocationResponse;
 import com.ibe.housekeeping.allocation.dto.TaskAssignmentItemResponse;
 import com.ibe.housekeeping.allocation.dto.UnassignedTaskItemResponse;
 import com.ibe.housekeeping.allocation.repository.TaskAssignmentRepository;
-import com.ibe.housekeeping.common.enums.AvailabilityStatus;
 import com.ibe.housekeeping.common.enums.TaskStatus;
 import com.ibe.housekeeping.common.enums.TaskType;
 import com.ibe.housekeeping.entity.CleaningTask;
@@ -23,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,7 +35,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class TaskAllocationService {
 
-    private static final int MAX_SHIFT_MINUTES = 240;
+    private static final int MAX_DAILY_MINUTES = 240;
+    private static final int MAX_BUCKET_MINUTES = 120;
     private static final String APPROVED_LEAVE_STATUS = "APPROVED";
     private static final EnumSet<TaskStatus> EXCLUDED_STATUSES = EnumSet.of(TaskStatus.COMPLETED, TaskStatus.CANCELLED);
     private static final LocalTime MORNING_START = LocalTime.of(8, 0);
@@ -69,13 +70,10 @@ public class TaskAllocationService {
     @Transactional
     public RunAllocationResponse runAllocation(LocalDate taskDate) {
         cleaningTaskService.generateTasks(taskDate);
-        List<Shift> allocationShifts = getAllocationShifts();
         List<CleaningTask> unassignedTasks = cleaningTaskRepository.findUnassignedEligibleTasksForAllocation(taskDate, EXCLUDED_STATUSES);
-        List<UUID> shiftIds = allocationShifts.stream().map(Shift::getId).toList();
-        List<TaskAssignment> existingAssignments = taskAssignmentRepository.findAllByTaskDateAndShiftIds(taskDate, shiftIds);
-        List<StaffProfile> eligibleStaff = allocationShifts.stream()
-                .flatMap(shift -> getEligibleStaff(shift.getId(), taskDate).stream())
-                .toList();
+        ShiftAllocationConfig shiftConfig = getAllocationShiftConfig();
+        List<TaskAssignment> existingAssignments = taskAssignmentRepository.findAllByTaskDate(taskDate);
+        List<StaffProfile> eligibleStaff = getEligibleStaff(taskDate);
 
         Map<UUID, StaffAllocationState> staffStates = initializeStaffStates(eligibleStaff, existingAssignments);
         List<CleaningTask> deepCleanTasks = new ArrayList<>();
@@ -97,16 +95,16 @@ public class TaskAllocationService {
 
         List<TaskAssignment> newAssignments = new ArrayList<>();
 
-        allocateTasks(deepCleanTasks, staffStates, newAssignments);
-        allocateTasks(dailyTasks, staffStates, newAssignments);
-        allocateTasks(vacantTasks, staffStates, newAssignments);
+        allocateTasks(deepCleanTasks, staffStates, shiftConfig, newAssignments);
+        allocateTasks(dailyTasks, staffStates, shiftConfig, newAssignments);
+        allocateTasks(vacantTasks, staffStates, shiftConfig, newAssignments);
 
         if (!newAssignments.isEmpty()) {
             taskAssignmentRepository.saveAll(newAssignments);
             staffProfileRepository.saveAll(eligibleStaff);
         }
 
-        List<TaskAssignment> allAssignments = taskAssignmentRepository.findAllByTaskDateAndShiftIds(taskDate, shiftIds);
+        List<TaskAssignment> allAssignments = taskAssignmentRepository.findAllByTaskDate(taskDate);
         List<CleaningTask> remainingUnassigned = cleaningTaskRepository.findUnassignedEligibleTasksForResult(taskDate, EXCLUDED_STATUSES);
 
         return new RunAllocationResponse(
@@ -118,8 +116,7 @@ public class TaskAllocationService {
 
     @Transactional(readOnly = true)
     public RunAllocationResponse getAllocation(LocalDate taskDate) {
-        List<UUID> shiftIds = getAllocationShifts().stream().map(Shift::getId).toList();
-        List<TaskAssignment> assignments = taskAssignmentRepository.findAllByTaskDateAndShiftIds(taskDate, shiftIds);
+        List<TaskAssignment> assignments = taskAssignmentRepository.findAllByTaskDate(taskDate);
         List<CleaningTask> unassignedTasks = cleaningTaskRepository.findUnassignedEligibleTasksForResult(taskDate, EXCLUDED_STATUSES);
 
         return new RunAllocationResponse(
@@ -129,9 +126,9 @@ public class TaskAllocationService {
         );
     }
 
-    private List<StaffProfile> getEligibleStaff(UUID shiftId, LocalDate taskDate) {
+    private List<StaffProfile> getEligibleStaff(LocalDate taskDate) {
         return staffProfileRepository
-                .findAllByCurrentShiftIdOrderByIdAsc(shiftId)
+                .findAllByOrderByIdAsc()
                 .stream()
                 .filter(staff -> !leaveRequestRepository
                         .existsByStaffIdAndStatusIgnoreCaseAndLeaveStartDateLessThanEqualAndLeaveEndDateGreaterThanEqual(
@@ -165,10 +162,13 @@ public class TaskAllocationService {
             }
 
             int estimatedMinutes = safeMinutes(assignment.getCleaningTask().getEstimatedMinutes());
-            state.allocatedMinutes += estimatedMinutes;
-            if (assignment.getCleaningTask().getTaskType() == TaskType.DEEP_CLEAN) {
-                state.deepCleanAssigned = true;
+            AllocationBucket bucket = resolveBucket(assignment.getCleaningTask());
+            if (bucket == null) {
+                continue;
             }
+            state.allocatedMinutes += estimatedMinutes;
+            state.allocatedTaskCount += 1;
+            state.bucketMinutes.merge(bucket, estimatedMinutes, Integer::sum);
         }
 
         return staffStates;
@@ -177,48 +177,86 @@ public class TaskAllocationService {
     private void allocateTasks(
             List<CleaningTask> tasks,
             Map<UUID, StaffAllocationState> staffStates,
+            ShiftAllocationConfig shiftConfig,
             List<TaskAssignment> newAssignments
     ) {
         for (CleaningTask task : tasks) {
-            Optional<StaffAllocationState> candidate = selectBestStaff(task, staffStates);
+            Optional<CandidatePlacement> candidate = selectBestPlacement(task, staffStates, shiftConfig);
             if (candidate.isEmpty()) {
                 continue;
             }
 
-            StaffAllocationState state = candidate.get();
-            task.setShift(state.staff.getCurrentShift());
+            CandidatePlacement placement = candidate.get();
+            StaffAllocationState state = placement.staffState();
+            task.setShift(placement.bucket().resolveShift(shiftConfig));
             task.setTaskStatus(TaskStatus.ASSIGNED);
             newAssignments.add(TaskAssignment.builder()
                     .cleaningTask(task)
                     .staff(state.staff)
                     .build());
 
-            state.allocatedMinutes += task.getEstimatedMinutes();
-            if (task.getTaskType() == TaskType.DEEP_CLEAN) {
-                state.deepCleanAssigned = true;
-            }
-            state.staff.setTotalMinutesWorked(safeMinutes(state.staff.getTotalMinutesWorked()) + task.getEstimatedMinutes());
+            int estimatedMinutes = safeMinutes(task.getEstimatedMinutes());
+            state.allocatedMinutes += estimatedMinutes;
+            state.allocatedTaskCount += 1;
+            state.bucketMinutes.merge(placement.bucket(), estimatedMinutes, Integer::sum);
+            state.staff.setTotalMinutesWorked(safeMinutes(state.staff.getTotalMinutesWorked()) + estimatedMinutes);
         }
     }
 
-    private Optional<StaffAllocationState> selectBestStaff(
+    private Optional<CandidatePlacement> selectBestPlacement(
             CleaningTask task,
-            Map<UUID, StaffAllocationState> staffStates
+            Map<UUID, StaffAllocationState> staffStates,
+            ShiftAllocationConfig shiftConfig
     ) {
-        return staffStates.values().stream()
-                .filter(state -> canFitTask(task, state))
+        List<CandidatePlacement> matchingCandidates = new ArrayList<>();
+        List<CandidatePlacement> fallbackCandidates = new ArrayList<>();
+
+        for (StaffAllocationState state : staffStates.values()) {
+            for (AllocationBucket bucket : AllocationBucket.allowedBucketsFor(task.getTaskType())) {
+                if (!canFitTask(task, state, bucket)) {
+                    continue;
+                }
+
+                CandidatePlacement placement = new CandidatePlacement(
+                        state,
+                        bucket,
+                        isPreferredShiftMatch(state.staff, bucket, shiftConfig)
+                );
+
+                if (placement.preferredShiftMatched()) {
+                    matchingCandidates.add(placement);
+                } else {
+                    fallbackCandidates.add(placement);
+                }
+            }
+        }
+
+        List<CandidatePlacement> rankedCandidates = matchingCandidates.isEmpty() ? fallbackCandidates : matchingCandidates;
+        return rankedCandidates.stream()
                 .min(Comparator
-                        .comparingInt((StaffAllocationState state) -> state.allocatedMinutes)
-                        .thenComparingInt(state -> state.historicalMinutes)
-                        .thenComparing(state -> state.staff.getId()));
+                        .comparingInt((CandidatePlacement placement) -> placement.staffState().allocatedMinutes)
+                        .thenComparingInt(placement -> placement.staffState().historicalMinutes)
+                        .thenComparingInt(placement -> placement.staffState().allocatedTaskCount)
+                        .thenComparing(placement -> placement.staffState().staff.getId())
+                        .thenComparingInt(placement -> placement.bucket().sortOrder));
     }
 
-    private boolean canFitTask(CleaningTask task, StaffAllocationState state) {
-        if (state.allocatedMinutes + task.getEstimatedMinutes() > MAX_SHIFT_MINUTES) {
+    private boolean canFitTask(CleaningTask task, StaffAllocationState state, AllocationBucket bucket) {
+        int estimatedMinutes = safeMinutes(task.getEstimatedMinutes());
+
+        if (estimatedMinutes <= 0) {
             return false;
         }
 
-        return task.getTaskType() != TaskType.DEEP_CLEAN || !state.deepCleanAssigned;
+        if (!bucket.allowedTaskTypes.contains(task.getTaskType())) {
+            return false;
+        }
+
+        if (state.allocatedMinutes + estimatedMinutes > MAX_DAILY_MINUTES) {
+            return false;
+        }
+
+        return state.bucketMinutes.getOrDefault(bucket, 0) + estimatedMinutes <= MAX_BUCKET_MINUTES;
     }
 
     private boolean isTaskValid(CleaningTask task) {
@@ -252,7 +290,8 @@ public class TaskAllocationService {
                 staff != null ? staff.getFullName() : "Unassigned",
                 shift != null ? shift.getId() : null,
                 shift != null ? shift.getShiftCode() : null,
-                shift != null ? shift.getShiftName() : null
+                shift != null ? shift.getShiftName() : null,
+                staff != null && shift != null && staff.getPreferredShift() != null && shift.getId().equals(staff.getPreferredShift().getId())
         );
     }
 
@@ -270,10 +309,10 @@ public class TaskAllocationService {
         );
     }
 
-    private List<Shift> getAllocationShifts() {
+    private ShiftAllocationConfig getAllocationShiftConfig() {
         Shift morningShift = requireShiftByWindow(MORNING_START, MORNING_END, "Morning");
         Shift afternoonShift = requireShiftByWindow(AFTERNOON_START, AFTERNOON_END, "Afternoon");
-        return List.of(morningShift, afternoonShift);
+        return new ShiftAllocationConfig(morningShift, afternoonShift);
     }
 
     private Shift requireShiftByWindow(LocalTime startTime, LocalTime endTime, String label) {
@@ -288,17 +327,112 @@ public class TaskAllocationService {
         return minutes == null ? 0 : minutes;
     }
 
+    private boolean isPreferredShiftMatch(StaffProfile staff, AllocationBucket bucket, ShiftAllocationConfig shiftConfig) {
+        Shift preferredShift = staff.getPreferredShift();
+        if (preferredShift == null) {
+            return false;
+        }
+
+        return preferredShift.getId().equals(bucket.resolveShift(shiftConfig).getId());
+    }
+
+    private AllocationBucket resolveBucket(CleaningTask task) {
+        Shift shift = task.getShift();
+        if (shift == null || task.getTaskType() == null) {
+            return null;
+        }
+
+        boolean morningShift = MORNING_START.equals(shift.getStartTime()) && MORNING_END.equals(shift.getEndTime());
+        boolean afternoonShift = AFTERNOON_START.equals(shift.getStartTime()) && AFTERNOON_END.equals(shift.getEndTime());
+
+        if (task.getTaskType() == TaskType.DEEP_CLEAN) {
+            if (morningShift) {
+                return AllocationBucket.B;
+            }
+            if (afternoonShift) {
+                return AllocationBucket.C;
+            }
+        }
+
+        if (task.getTaskType() == TaskType.DAILY_CLEAN || task.getTaskType() == TaskType.VACANT_CLEAN) {
+            if (morningShift) {
+                return AllocationBucket.A;
+            }
+            if (afternoonShift) {
+                return AllocationBucket.D;
+            }
+        }
+
+        return null;
+    }
+
+    private record ShiftAllocationConfig(Shift morningShift, Shift afternoonShift) {
+    }
+
+    private enum AllocationBucket {
+        A(0, EnumSet.of(TaskType.DAILY_CLEAN, TaskType.VACANT_CLEAN)) {
+            @Override
+            Shift resolveShift(ShiftAllocationConfig shiftConfig) {
+                return shiftConfig.morningShift();
+            }
+        },
+        B(1, EnumSet.of(TaskType.DEEP_CLEAN)) {
+            @Override
+            Shift resolveShift(ShiftAllocationConfig shiftConfig) {
+                return shiftConfig.morningShift();
+            }
+        },
+        C(2, EnumSet.of(TaskType.DEEP_CLEAN)) {
+            @Override
+            Shift resolveShift(ShiftAllocationConfig shiftConfig) {
+                return shiftConfig.afternoonShift();
+            }
+        },
+        D(3, EnumSet.of(TaskType.DAILY_CLEAN, TaskType.VACANT_CLEAN)) {
+            @Override
+            Shift resolveShift(ShiftAllocationConfig shiftConfig) {
+                return shiftConfig.afternoonShift();
+            }
+        };
+
+        private final int sortOrder;
+        private final EnumSet<TaskType> allowedTaskTypes;
+
+        AllocationBucket(int sortOrder, EnumSet<TaskType> allowedTaskTypes) {
+            this.sortOrder = sortOrder;
+            this.allowedTaskTypes = allowedTaskTypes;
+        }
+
+        abstract Shift resolveShift(ShiftAllocationConfig shiftConfig);
+
+        private static List<AllocationBucket> allowedBucketsFor(TaskType taskType) {
+            return switch (taskType) {
+                case DEEP_CLEAN -> List.of(B, C);
+                case DAILY_CLEAN, VACANT_CLEAN -> List.of(A, D);
+            };
+        }
+    }
+
+    private record CandidatePlacement(
+            StaffAllocationState staffState,
+            AllocationBucket bucket,
+            boolean preferredShiftMatched
+    ) {
+    }
+
     private static final class StaffAllocationState {
         private final StaffProfile staff;
         private final int historicalMinutes;
         private int allocatedMinutes;
-        private boolean deepCleanAssigned;
+        private int allocatedTaskCount;
+        private final Map<AllocationBucket, Integer> bucketMinutes;
 
         private StaffAllocationState(StaffProfile staff, int historicalMinutes) {
             this.staff = staff;
             this.historicalMinutes = historicalMinutes;
             this.allocatedMinutes = 0;
-            this.deepCleanAssigned = false;
+            this.allocatedTaskCount = 0;
+            this.bucketMinutes = new LinkedHashMap<>();
         }
     }
 }

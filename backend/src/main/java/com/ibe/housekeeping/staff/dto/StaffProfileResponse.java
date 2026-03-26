@@ -10,7 +10,7 @@ public record StaffProfileResponse(
         String displayName,
         String email,
         String phone,
-        String currentShift,
+        String preferredShift,
         String assignedWing,
         AvailabilityStatus availabilityStatus
 ) {
