@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibe.housekeeping.auth.dto.LoginRequest;
 import com.ibe.housekeeping.auth.repository.UserRepository;
+import com.ibe.housekeeping.allocation.repository.TaskAssignmentRepository;
 import com.ibe.housekeeping.common.enums.Role;
 import com.ibe.housekeeping.common.enums.RoomStatus;
 import com.ibe.housekeeping.entity.Room;
@@ -53,12 +54,16 @@ class CleaningTaskControllerIntegrationTest {
     private CleaningTaskRepository cleaningTaskRepository;
 
     @Autowired
+    private TaskAssignmentRepository taskAssignmentRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private String accessToken;
 
     @BeforeEach
     void setUp() throws Exception {
+        taskAssignmentRepository.deleteAll();
         cleaningTaskRepository.deleteAll();
         roomStayRepository.deleteAll();
         roomRepository.deleteAll();

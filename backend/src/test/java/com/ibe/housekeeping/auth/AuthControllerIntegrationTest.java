@@ -1,11 +1,13 @@
 package com.ibe.housekeeping.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ibe.housekeeping.allocation.repository.TaskAssignmentRepository;
 import com.ibe.housekeeping.auth.dto.CreateUserRequest;
 import com.ibe.housekeeping.auth.dto.LoginRequest;
 import com.ibe.housekeeping.auth.repository.UserRepository;
 import com.ibe.housekeeping.common.enums.Role;
 import com.ibe.housekeeping.entity.User;
+import com.ibe.housekeeping.staff.repository.StaffProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,10 +36,18 @@ class AuthControllerIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private TaskAssignmentRepository taskAssignmentRepository;
+
+    @Autowired
+    private StaffProfileRepository staffProfileRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void setUp() {
+        taskAssignmentRepository.deleteAll();
+        staffProfileRepository.deleteAll();
         userRepository.deleteAll();
     }
 
