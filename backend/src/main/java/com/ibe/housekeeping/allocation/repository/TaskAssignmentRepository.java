@@ -1,6 +1,7 @@
 package com.ibe.housekeeping.allocation.repository;
 
 import com.ibe.housekeeping.entity.TaskAssignment;
+import java.util.Collection;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -9,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, UUID> {
+
+    void deleteAllByCleaningTaskRoomIdIn(Collection<UUID> roomIds);
 
     @Query("""
             select assignment

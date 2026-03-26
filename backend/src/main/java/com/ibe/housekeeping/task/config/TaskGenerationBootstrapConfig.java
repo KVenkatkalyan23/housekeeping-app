@@ -1,5 +1,6 @@
 package com.ibe.housekeeping.task.config;
 
+import com.ibe.housekeeping.allocation.repository.TaskAssignmentRepository;
 import com.ibe.housekeeping.common.enums.RoomStatus;
 import com.ibe.housekeeping.entity.Room;
 import com.ibe.housekeeping.entity.RoomStay;
@@ -29,6 +30,7 @@ public class TaskGenerationBootstrapConfig {
             TaskGenerationBootstrapProperties properties,
             RoomRepository roomRepository,
             RoomStayRepository roomStayRepository,
+            TaskAssignmentRepository taskAssignmentRepository,
             CleaningTaskRepository cleaningTaskRepository,
             PlatformTransactionManager transactionManager
     ) {
@@ -39,7 +41,12 @@ public class TaskGenerationBootstrapConfig {
 
             TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
             transactionTemplate.executeWithoutResult(status ->
-                    seedVerificationRoomsAndStays(roomRepository, roomStayRepository, cleaningTaskRepository)
+                    seedVerificationRoomsAndStays(
+                            roomRepository,
+                            roomStayRepository,
+                            taskAssignmentRepository,
+                            cleaningTaskRepository
+                    )
             );
         };
     }
@@ -47,6 +54,7 @@ public class TaskGenerationBootstrapConfig {
     protected void seedVerificationRoomsAndStays(
             RoomRepository roomRepository,
             RoomStayRepository roomStayRepository,
+            TaskAssignmentRepository taskAssignmentRepository,
             CleaningTaskRepository cleaningTaskRepository
     ) {
         LocalDate today = LocalDate.now();
@@ -74,6 +82,7 @@ public class TaskGenerationBootstrapConfig {
                 .map(Room::getId)
                 .toList();
 
+        taskAssignmentRepository.deleteAllByCleaningTaskRoomIdIn(roomIds);
         cleaningTaskRepository.deleteAllByRoomIdIn(roomIds);
         roomStayRepository.deleteAllByRoomIdIn(roomIds);
 
