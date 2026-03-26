@@ -1,6 +1,6 @@
 import { useSelector } from 'react-redux'
 
-import type { RootState } from '../../../app/store'
+import type { RootState } from '../../../../app/store'
 
 export function ProfileHeader() {
   const username = useSelector((state: RootState) => state.auth.username)

@@ -75,6 +75,11 @@ public class StaffProfile {
     @Column(name = "availability_status", nullable = false, length = 20)
     private AvailabilityStatus availabilityStatus = AvailabilityStatus.OFF_DUTY;
 
+    @Builder.Default
+    @NotNull
+    @Column(name = "total_minutes_worked", nullable = false)
+    private Integer totalMinutesWorked = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

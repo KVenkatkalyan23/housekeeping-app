@@ -48,7 +48,7 @@ public class StaffBootstrapConfig {
             ShiftRepository shiftRepository,
             StaffProfileRepository staffProfileRepository
     ) {
-        List<String> shiftCodes = List.of("MORN", "MID", "EVE");
+        List<String> shiftCodes = List.of("MORN", "AFT");
 
         for (int index = 0; index < properties.count(); index++) {
             String username = index == 0 ? "staff" : "staff%02d".formatted(index);
@@ -76,8 +76,7 @@ public class StaffBootstrapConfig {
     @Transactional
     protected void seedShifts(ShiftRepository shiftRepository) {
         upsertShift(shiftRepository, "MORN", "Morning Shift", LocalTime.of(8, 0), LocalTime.of(12, 0), 240);
-        upsertShift(shiftRepository, "MID", "Mid Shift", LocalTime.of(12, 0), LocalTime.of(16, 0), 240);
-        upsertShift(shiftRepository, "EVE", "Evening Shift", LocalTime.of(16, 0), LocalTime.of(20, 0), 240);
+        upsertShift(shiftRepository, "AFT", "Afternoon Shift", LocalTime.of(13, 0), LocalTime.of(17, 0), 240);
     }
 
     private void upsertShift(

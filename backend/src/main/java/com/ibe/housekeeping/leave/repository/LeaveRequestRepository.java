@@ -8,4 +8,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID> {
 
     List<LeaveRequest> findByStaffIdOrderByLeaveStartDateDesc(UUID staffId);
+
+    boolean existsByStaffIdAndStatusIgnoreCaseAndLeaveStartDateLessThanEqualAndLeaveEndDateGreaterThanEqual(
+            UUID staffId,
+            String status,
+            java.time.LocalDate leaveEndDate,
+            java.time.LocalDate leaveStartDate
+    );
 }
