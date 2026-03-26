@@ -129,7 +129,7 @@ Indexes:
 - id: UUID (PK)
 - room_id: UUID NOT NULL (FK → room.id)
 - task_date: DATE NOT NULL
-- shift_id: UUID NOT NULL (FK → shifts.id)
+- shift_id: UUID NULL (FK → shifts.id)
 - task_type: VARCHAR(20) NOT NULL
 - priority_order: INT NOT NULL
 - estimated_minutes: INT NOT NULL

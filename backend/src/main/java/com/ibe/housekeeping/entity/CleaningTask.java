@@ -58,7 +58,7 @@ public class CleaningTask {
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shift_id", nullable = false)
+    @JoinColumn(name = "shift_id", nullable = true)
     private Shift shift;
 
     @NotNull
