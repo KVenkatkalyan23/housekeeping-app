@@ -14,6 +14,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
@@ -30,6 +31,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Entity
 @Table(
         name = "cleaning_tasks",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_cleaning_tasks_room_date", columnNames = {"room_id", "task_date"})
+        },
         indexes = {
                 @Index(name = "idx_cleaning_tasks_date_shift", columnList = "task_date, shift_id"),
                 @Index(name = "idx_cleaning_tasks_priority", columnList = "task_date, shift_id, priority_order"),
@@ -56,7 +60,6 @@ public class CleaningTask {
     @Column(name = "task_date", nullable = false)
     private LocalDate taskDate;
 
-    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shift_id", nullable = true)
     private Shift shift;
