@@ -9,6 +9,7 @@ public record TaskAssignmentItemResponse(
         TaskType taskType,
         int estimatedMinutes,
         UUID staffId,
+        String staffUsername,
         String staffName,
         UUID shiftId,
         String shiftCode,

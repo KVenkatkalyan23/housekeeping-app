@@ -13,6 +13,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
 
     Optional<Attendance> findTopByStaffIdAndClockOutTimeIsNullOrderByClockInTimeDesc(UUID staffId);
 
+    Optional<Attendance> findTopByStaffIdAndWorkDateOrderByClockInTimeDesc(UUID staffId, LocalDate workDate);
+
     List<Attendance> findAllByStaffIdAndWorkDateBetweenOrderByWorkDateAscClockInTimeAsc(
             UUID staffId,
             LocalDate startDate,

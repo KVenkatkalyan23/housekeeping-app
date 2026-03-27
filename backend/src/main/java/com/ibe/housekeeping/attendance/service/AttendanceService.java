@@ -4,6 +4,7 @@ import com.ibe.housekeeping.attendance.dto.AttendanceStatusResponse;
 import com.ibe.housekeeping.attendance.dto.ClockInResponse;
 import com.ibe.housekeeping.attendance.dto.ClockOutResponse;
 import com.ibe.housekeeping.attendance.repository.AttendanceRepository;
+import com.ibe.housekeeping.allocation.service.ReallocationService;
 import com.ibe.housekeeping.auth.repository.UserRepository;
 import com.ibe.housekeeping.common.enums.AvailabilityStatus;
 import com.ibe.housekeeping.entity.Attendance;
@@ -26,15 +27,18 @@ public class AttendanceService {
     private final AttendanceRepository attendanceRepository;
     private final StaffProfileRepository staffProfileRepository;
     private final UserRepository userRepository;
+    private final ReallocationService reallocationService;
 
     public AttendanceService(
             AttendanceRepository attendanceRepository,
             StaffProfileRepository staffProfileRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            ReallocationService reallocationService
     ) {
         this.attendanceRepository = attendanceRepository;
         this.staffProfileRepository = staffProfileRepository;
         this.userRepository = userRepository;
+        this.reallocationService = reallocationService;
     }
 
     @Transactional(readOnly = true)
@@ -103,6 +107,7 @@ public class AttendanceService {
 
         staffProfile.setAvailabilityStatus(AvailabilityStatus.OFF_DUTY);
         staffProfileRepository.save(staffProfile);
+        reallocationService.reallocateTodayForStaff(staffProfile.getId());
 
         return new ClockOutResponse(
                 savedAttendance.getId(),

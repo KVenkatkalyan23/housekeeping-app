@@ -12,6 +12,7 @@ import com.ibe.housekeeping.entity.CleaningTask;
 import com.ibe.housekeeping.entity.Shift;
 import com.ibe.housekeeping.entity.StaffProfile;
 import com.ibe.housekeeping.entity.TaskAssignment;
+import com.ibe.housekeeping.entity.User;
 import com.ibe.housekeeping.leave.repository.LeaveRequestRepository;
 import com.ibe.housekeeping.shift.repository.ShiftRepository;
 import com.ibe.housekeeping.staff.repository.StaffProfileRepository;
@@ -50,6 +51,7 @@ public class TaskAllocationService {
     private final ShiftRepository shiftRepository;
     private final LeaveRequestRepository leaveRequestRepository;
     private final CleaningTaskService cleaningTaskService;
+    private final TaskDateLockService taskDateLockService;
 
     public TaskAllocationService(
             CleaningTaskRepository cleaningTaskRepository,
@@ -57,7 +59,8 @@ public class TaskAllocationService {
             TaskAssignmentRepository taskAssignmentRepository,
             ShiftRepository shiftRepository,
             LeaveRequestRepository leaveRequestRepository,
-            CleaningTaskService cleaningTaskService
+            CleaningTaskService cleaningTaskService,
+            TaskDateLockService taskDateLockService
     ) {
         this.cleaningTaskRepository = cleaningTaskRepository;
         this.staffProfileRepository = staffProfileRepository;
@@ -65,11 +68,44 @@ public class TaskAllocationService {
         this.shiftRepository = shiftRepository;
         this.leaveRequestRepository = leaveRequestRepository;
         this.cleaningTaskService = cleaningTaskService;
+        this.taskDateLockService = taskDateLockService;
     }
 
     @Transactional
     public RunAllocationResponse runAllocation(LocalDate taskDate) {
-        cleaningTaskService.generateTasks(taskDate);
+        return taskDateLockService.executeWithTaskDateLock(taskDate, () -> runAllocationInternal(taskDate, true));
+    }
+
+    @Transactional
+    public RunAllocationResponse runScheduledAllocation(LocalDate taskDate) {
+        return taskDateLockService.executeWithTaskDateLock(taskDate, () -> runAllocationInternal(taskDate, true));
+    }
+
+    @Transactional(readOnly = true)
+    public RunAllocationResponse getAllocation(LocalDate taskDate) {
+        List<TaskAssignment> assignments = taskAssignmentRepository.findAllByTaskDate(taskDate);
+        List<CleaningTask> unassignedTasks = cleaningTaskRepository.findUnassignedEligibleTasksForResult(taskDate, EXCLUDED_STATUSES);
+
+        return new RunAllocationResponse(
+                buildSummary(taskDate, assignments.size(), unassignedTasks.size()),
+                assignments.stream().map(this::toAssignmentItem).toList(),
+                unassignedTasks.stream().map(this::toUnassignedItem).toList()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<TaskAssignmentItemResponse> getTaskAssignments(LocalDate taskDate) {
+        return taskAssignmentRepository.findAllByTaskDate(taskDate)
+                .stream()
+                .map(this::toAssignmentItem)
+                .toList();
+    }
+
+    private RunAllocationResponse runAllocationInternal(LocalDate taskDate, boolean generateTasks) {
+        if (generateTasks) {
+            cleaningTaskService.generateTasks(taskDate);
+        }
+
         List<CleaningTask> unassignedTasks = cleaningTaskRepository.findUnassignedEligibleTasksForAllocation(taskDate, EXCLUDED_STATUSES);
         ShiftAllocationConfig shiftConfig = getAllocationShiftConfig();
         List<TaskAssignment> existingAssignments = taskAssignmentRepository.findAllByTaskDate(taskDate);
@@ -110,18 +146,6 @@ public class TaskAllocationService {
                 buildSummary(taskDate, allAssignments.size(), remainingUnassigned.size()),
                 allAssignments.stream().map(this::toAssignmentItem).toList(),
                 remainingUnassigned.stream().map(this::toUnassignedItem).toList()
-        );
-    }
-
-    @Transactional(readOnly = true)
-    public RunAllocationResponse getAllocation(LocalDate taskDate) {
-        List<TaskAssignment> assignments = taskAssignmentRepository.findAllByTaskDate(taskDate);
-        List<CleaningTask> unassignedTasks = cleaningTaskRepository.findUnassignedEligibleTasksForResult(taskDate, EXCLUDED_STATUSES);
-
-        return new RunAllocationResponse(
-                buildSummary(taskDate, assignments.size(), unassignedTasks.size()),
-                assignments.stream().map(this::toAssignmentItem).toList(),
-                unassignedTasks.stream().map(this::toUnassignedItem).toList()
         );
     }
 
@@ -278,6 +302,7 @@ public class TaskAllocationService {
         CleaningTask task = assignment.getCleaningTask();
         Shift shift = task.getShift();
         StaffProfile staff = assignment.getStaff();
+        User user = staff != null ? staff.getUser() : null;
 
         return new TaskAssignmentItemResponse(
                 task.getId(),
@@ -285,6 +310,7 @@ public class TaskAllocationService {
                 task.getTaskType(),
                 task.getEstimatedMinutes(),
                 staff != null ? staff.getId() : null,
+                user != null ? user.getUsername() : null,
                 staff != null ? staff.getFullName() : "Unassigned",
                 shift != null ? shift.getId() : null,
                 shift != null ? shift.getShiftCode() : null,
