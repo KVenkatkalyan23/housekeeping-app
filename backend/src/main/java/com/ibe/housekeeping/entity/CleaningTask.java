@@ -85,6 +85,9 @@ public class CleaningTask {
     @Column(name = "task_status", nullable = false, length = 20)
     private TaskStatus taskStatus = TaskStatus.PENDING;
 
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_stay_id")
     private RoomStay sourceStay;
