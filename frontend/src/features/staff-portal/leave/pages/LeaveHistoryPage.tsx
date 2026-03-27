@@ -1,8 +1,11 @@
-import { useGetLeaveHistoryQuery } from '../api'
+import { useDispatch, useSelector } from 'react-redux'
+
+import type { RootState } from '../../../../app/store'
+import { useGetMyLeavesQuery } from '../api'
 import { BottomNav } from '../components/BottomNav'
-import { LeaveFab } from '../components/LeaveFab'
 import { LeaveHistoryHeader } from '../components/LeaveHistoryHeader'
 import { LeaveHistoryList } from '../components/LeaveHistoryList'
+import { setMyLeavePage } from '../slice'
 
 function resolveErrorMessage(error: unknown) {
   if (!error || typeof error !== 'object') {
@@ -22,8 +25,56 @@ function resolveErrorMessage(error: unknown) {
   )
 }
 
+function LeavePagination({
+  currentPage,
+  hasPrevious,
+  hasNext,
+  onPrevious,
+  onNext,
+}: {
+  currentPage: number
+  hasPrevious: boolean
+  hasNext: boolean
+  onPrevious: () => void
+  onNext: () => void
+}) {
+  return (
+    <div className="mt-6 flex items-center justify-between rounded-[1.4rem] bg-white px-4 py-3 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
+      <button
+        type="button"
+        onClick={onPrevious}
+        disabled={!hasPrevious}
+        className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-45"
+      >
+        Newer
+      </button>
+      <span className="text-sm font-semibold text-[#23324d]">Page {currentPage + 1}</span>
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={!hasNext}
+        className="rounded-full bg-[#2d63cb] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45"
+      >
+        Older
+      </button>
+    </div>
+  )
+}
+
 export function LeaveHistoryPage() {
-  const { data, isLoading, isError, error, refetch } = useGetLeaveHistoryQuery()
+  const dispatch = useDispatch()
+  const userId = useSelector((state: RootState) => state.auth.userId)
+  const currentPage = useSelector((state: RootState) => state.leaveUi.myPage)
+  const { data, isLoading, isError, error, refetch } = useGetMyLeavesQuery(
+    {
+      userId: userId ?? '',
+      page: currentPage,
+      size: 5,
+    },
+    {
+      skip: !userId,
+    },
+  )
 
   if (isLoading) {
     return (
@@ -63,15 +114,24 @@ export function LeaveHistoryPage() {
 
         <section className="mt-6">
           <h1 className="text-[2.2rem] font-semibold tracking-[-0.06em] text-[#2849c7]">
-            Leave History
+            My Leaves
           </h1>
           <p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">
-            View your past time off applications and their status.
+            Review approved leave requests and the dates already reserved for you.
           </p>
         </section>
 
-        {data.length > 0 ? (
-          <LeaveHistoryList items={data} />
+        {data.items.length > 0 ? (
+          <>
+            <LeaveHistoryList items={data.items} />
+            <LeavePagination
+              currentPage={data.pagination.page}
+              hasPrevious={data.pagination.hasPrevious}
+              hasNext={data.pagination.hasNext}
+              onPrevious={() => dispatch(setMyLeavePage(data.pagination.page - 1))}
+              onNext={() => dispatch(setMyLeavePage(data.pagination.page + 1))}
+            />
+          </>
         ) : (
           <section className="mt-8 rounded-[1.5rem] bg-white p-6 text-center shadow-[0_14px_36px_rgba(15,23,42,0.08)]">
             <h2 className="text-lg font-semibold text-[#26324d]">No leave history</h2>
@@ -82,7 +142,6 @@ export function LeaveHistoryPage() {
         )}
       </div>
 
-      <LeaveFab />
       <BottomNav />
     </main>
   )

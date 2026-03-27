@@ -1,4 +1,4 @@
-import type { LeaveHistoryItemResponse } from '../types'
+import type { LeaveListItem } from '../types'
 
 function formatLeaveType(value: string) {
   return value
@@ -13,7 +13,7 @@ function formatDate(value: string) {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  }).format(new Date(value))
+  }).format(new Date(`${value}T00:00:00`))
 }
 
 function formatDuration(days: number) {
@@ -22,14 +22,10 @@ function formatDuration(days: number) {
 
 function getStatusClasses(status: string) {
   if (status === 'APPROVED') {
-    return 'text-[#375fca]'
+    return 'bg-[#eef4ff] text-[#375fca]'
   }
 
-  if (status === 'DENIED') {
-    return 'text-[#d35d63]'
-  }
-
-  return 'text-slate-500'
+  return 'bg-slate-100 text-slate-600'
 }
 
 function LeaveIcon() {
@@ -49,32 +45,46 @@ function LeaveIcon() {
 }
 
 interface LeaveHistoryCardProps {
-  item: LeaveHistoryItemResponse
+  item: LeaveListItem
+  showStaffDetails?: boolean
 }
 
-export function LeaveHistoryCard({ item }: LeaveHistoryCardProps) {
+export function LeaveHistoryCard({ item, showStaffDetails = false }: LeaveHistoryCardProps) {
   return (
-    <article className="flex items-center justify-between gap-4 rounded-[1.5rem] bg-[#f7f8fb] px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-      <div className="flex items-center gap-3">
-        <LeaveIcon />
-        <div>
-          <h3 className="text-sm font-semibold text-[#26324d]">
-            {formatLeaveType(item.leaveType)}
-          </h3>
-          <p className="mt-1 text-[0.78rem] text-slate-400">
-            {formatDate(item.leaveStartDate)}
+    <article className="rounded-[1.5rem] bg-[#f7f8fb] px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <LeaveIcon />
+          <div>
+            <h3 className="text-sm font-semibold text-[#26324d]">
+              {formatLeaveType(item.leaveType)}
+            </h3>
+            <p className="mt-1 text-[0.78rem] text-slate-500">
+              {formatDate(item.fromDate)} to {formatDate(item.toDate)}
+            </p>
+            {showStaffDetails ? (
+              <p className="mt-1 text-[0.78rem] text-slate-400">
+                {item.staffName} ({item.username})
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="text-right">
+          <span
+            className={`inline-flex rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] ${getStatusClasses(item.status)}`}
+          >
+            {formatLeaveType(item.status)}
+          </span>
+          <p className="mt-2 text-[0.72rem] text-slate-400">
+            {formatDuration(item.durationDays)}
           </p>
         </div>
       </div>
 
-      <div className="text-right">
-        <p className={`text-sm font-semibold ${getStatusClasses(item.status)}`}>
-          {formatLeaveType(item.status)}
-        </p>
-        <p className="mt-1 text-[0.72rem] text-slate-400">
-          {formatDuration(item.durationDays)}
-        </p>
-      </div>
+      {item.reason ? (
+        <p className="mt-3 text-sm leading-6 text-slate-500">{item.reason}</p>
+      ) : null}
     </article>
   )
 }
