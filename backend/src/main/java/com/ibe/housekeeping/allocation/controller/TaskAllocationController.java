@@ -2,9 +2,11 @@ package com.ibe.housekeeping.allocation.controller;
 
 import com.ibe.housekeeping.allocation.dto.RunAllocationRequest;
 import com.ibe.housekeeping.allocation.dto.RunAllocationResponse;
+import com.ibe.housekeeping.allocation.dto.TaskAssignmentItemResponse;
 import com.ibe.housekeeping.allocation.service.TaskAllocationService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,5 +34,10 @@ public class TaskAllocationController {
     @GetMapping
     public RunAllocationResponse getAllocation(@RequestParam LocalDate taskDate) {
         return taskAllocationService.getAllocation(taskDate);
+    }
+
+    @GetMapping("/assignments")
+    public List<TaskAssignmentItemResponse> getTaskAssignments(@RequestParam LocalDate taskDate) {
+        return taskAllocationService.getTaskAssignments(taskDate);
     }
 }

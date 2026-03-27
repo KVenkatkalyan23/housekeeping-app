@@ -1,6 +1,7 @@
 package com.ibe.housekeeping.leave.service;
 
 import com.ibe.housekeeping.auth.repository.UserRepository;
+import com.ibe.housekeeping.allocation.service.ReallocationService;
 import com.ibe.housekeeping.common.enums.LeaveStatus;
 import com.ibe.housekeeping.common.enums.LeaveType;
 import com.ibe.housekeeping.common.enums.Role;
@@ -36,15 +37,18 @@ public class LeaveService {
     private final LeaveRequestRepository leaveRequestRepository;
     private final StaffProfileRepository staffProfileRepository;
     private final UserRepository userRepository;
+    private final ReallocationService reallocationService;
 
     public LeaveService(
             LeaveRequestRepository leaveRequestRepository,
             StaffProfileRepository staffProfileRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            ReallocationService reallocationService
     ) {
         this.leaveRequestRepository = leaveRequestRepository;
         this.staffProfileRepository = staffProfileRepository;
         this.userRepository = userRepository;
+        this.reallocationService = reallocationService;
     }
 
     @Transactional
@@ -73,6 +77,10 @@ public class LeaveService {
                 .reason(normalizeReason(request.reason()))
                 .status(LeaveStatus.APPROVED)
                 .build());
+
+        if (!fromDate.isAfter(LocalDate.now()) && !toDate.isBefore(LocalDate.now())) {
+            reallocationService.reallocateTodayForStaff(staffProfile.getId());
+        }
 
         return toItemResponse(leaveRequest);
     }

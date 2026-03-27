@@ -188,7 +188,16 @@ class TaskAllocationControllerIntegrationTest {
                 .andExpect(jsonPath("$.summary.assignedTasks").value(8))
                 .andExpect(jsonPath("$.summary.unassignedTasks").value(0))
                 .andExpect(jsonPath("$.assignments.length()").value(8))
+                .andExpect(jsonPath("$.assignments[0].staffUsername").isNotEmpty())
                 .andExpect(jsonPath("$.unassigned.length()").value(0));
+
+        mockMvc.perform(get("/api/allocation/assignments")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .param("taskDate", TASK_DATE.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(8))
+                .andExpect(jsonPath("$[0].staffUsername").value("staff-b"))
+                .andExpect(jsonPath("$[0].staffName").value("Staff B"));
     }
 
     @Test
