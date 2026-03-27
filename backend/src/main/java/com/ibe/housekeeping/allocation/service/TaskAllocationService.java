@@ -5,6 +5,7 @@ import com.ibe.housekeeping.allocation.dto.RunAllocationResponse;
 import com.ibe.housekeeping.allocation.dto.TaskAssignmentItemResponse;
 import com.ibe.housekeeping.allocation.dto.UnassignedTaskItemResponse;
 import com.ibe.housekeeping.allocation.repository.TaskAssignmentRepository;
+import com.ibe.housekeeping.common.enums.LeaveStatus;
 import com.ibe.housekeeping.common.enums.TaskStatus;
 import com.ibe.housekeeping.common.enums.TaskType;
 import com.ibe.housekeeping.entity.CleaningTask;
@@ -37,7 +38,6 @@ public class TaskAllocationService {
 
     private static final int MAX_DAILY_MINUTES = 240;
     private static final int MAX_BUCKET_MINUTES = 120;
-    private static final String APPROVED_LEAVE_STATUS = "APPROVED";
     private static final EnumSet<TaskStatus> EXCLUDED_STATUSES = EnumSet.of(TaskStatus.COMPLETED, TaskStatus.CANCELLED);
     private static final LocalTime MORNING_START = LocalTime.of(8, 0);
     private static final LocalTime MORNING_END = LocalTime.of(12, 0);
@@ -130,9 +130,9 @@ public class TaskAllocationService {
                 .findAllByOrderByIdAsc()
                 .stream()
                 .filter(staff -> !leaveRequestRepository
-                        .existsByStaffIdAndStatusIgnoreCaseAndLeaveStartDateLessThanEqualAndLeaveEndDateGreaterThanEqual(
+                        .existsByStaffIdAndStatusAndLeaveStartDateLessThanEqualAndLeaveEndDateGreaterThanEqual(
                                 staff.getId(),
-                                APPROVED_LEAVE_STATUS,
+                                LeaveStatus.APPROVED,
                                 taskDate,
                                 taskDate
                         ))
