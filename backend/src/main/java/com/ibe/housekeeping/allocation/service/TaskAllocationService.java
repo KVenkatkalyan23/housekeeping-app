@@ -101,7 +101,6 @@ public class TaskAllocationService {
 
         if (!newAssignments.isEmpty()) {
             taskAssignmentRepository.saveAll(newAssignments);
-            staffProfileRepository.saveAll(eligibleStaff);
         }
 
         List<TaskAssignment> allAssignments = taskAssignmentRepository.findAllByTaskDate(taskDate);
@@ -199,7 +198,6 @@ public class TaskAllocationService {
             state.allocatedMinutes += estimatedMinutes;
             state.allocatedTaskCount += 1;
             state.bucketMinutes.merge(placement.bucket(), estimatedMinutes, Integer::sum);
-            state.staff.setTotalMinutesWorked(safeMinutes(state.staff.getTotalMinutesWorked()) + estimatedMinutes);
         }
     }
 
@@ -376,19 +374,19 @@ public class TaskAllocationService {
                 return shiftConfig.morningShift();
             }
         },
-        B(1, EnumSet.of(TaskType.DEEP_CLEAN)) {
-            @Override
-            Shift resolveShift(ShiftAllocationConfig shiftConfig) {
-                return shiftConfig.morningShift();
-            }
-        },
-        C(2, EnumSet.of(TaskType.DEEP_CLEAN)) {
+        D(1, EnumSet.of(TaskType.DAILY_CLEAN, TaskType.VACANT_CLEAN)) {
             @Override
             Shift resolveShift(ShiftAllocationConfig shiftConfig) {
                 return shiftConfig.afternoonShift();
             }
         },
-        D(3, EnumSet.of(TaskType.DAILY_CLEAN, TaskType.VACANT_CLEAN)) {
+        B(2, EnumSet.of(TaskType.DEEP_CLEAN, TaskType.DAILY_CLEAN, TaskType.VACANT_CLEAN)) {
+            @Override
+            Shift resolveShift(ShiftAllocationConfig shiftConfig) {
+                return shiftConfig.morningShift();
+            }
+        },
+        C(3, EnumSet.of(TaskType.DEEP_CLEAN, TaskType.DAILY_CLEAN, TaskType.VACANT_CLEAN)) {
             @Override
             Shift resolveShift(ShiftAllocationConfig shiftConfig) {
                 return shiftConfig.afternoonShift();
@@ -408,7 +406,7 @@ public class TaskAllocationService {
         private static List<AllocationBucket> allowedBucketsFor(TaskType taskType) {
             return switch (taskType) {
                 case DEEP_CLEAN -> List.of(B, C);
-                case DAILY_CLEAN, VACANT_CLEAN -> List.of(A, D);
+                case DAILY_CLEAN, VACANT_CLEAN -> List.of(A, D, B, C);
             };
         }
     }

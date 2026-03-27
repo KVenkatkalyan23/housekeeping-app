@@ -9,12 +9,15 @@ import com.ibe.housekeeping.common.enums.AvailabilityStatus;
 import com.ibe.housekeeping.common.enums.Role;
 import com.ibe.housekeeping.common.enums.RoomStatus;
 import com.ibe.housekeeping.common.enums.TaskStatus;
+import com.ibe.housekeeping.common.enums.TaskType;
 import com.ibe.housekeeping.entity.CleaningTask;
+import com.ibe.housekeeping.entity.LeaveRequest;
 import com.ibe.housekeeping.entity.Room;
+import com.ibe.housekeeping.entity.RoomStay;
 import com.ibe.housekeeping.entity.Shift;
 import com.ibe.housekeeping.entity.StaffProfile;
+import com.ibe.housekeeping.entity.TaskAssignment;
 import com.ibe.housekeeping.entity.User;
-import com.ibe.housekeeping.entity.RoomStay;
 import com.ibe.housekeeping.leave.repository.LeaveRequestRepository;
 import com.ibe.housekeeping.room.repository.RoomRepository;
 import com.ibe.housekeeping.roomstay.repository.RoomStayRepository;
@@ -152,6 +155,8 @@ class TaskAllocationControllerIntegrationTest {
                 .andExpect(jsonPath("$.assignments[1].staffName").value("Staff A"))
                 .andExpect(jsonPath("$.assignments[0].shiftName").value("Afternoon Shift"))
                 .andExpect(jsonPath("$.assignments[1].shiftName").value("Morning Shift"))
+                .andExpect(jsonPath("$.assignments[0].preferredShiftMatched").value(true))
+                .andExpect(jsonPath("$.assignments[1].preferredShiftMatched").value(true))
                 .andExpect(jsonPath("$.unassigned.length()").value(0));
 
         List<CleaningTask> savedTasks = cleaningTaskRepository.findAllByTaskDateOrderByPriorityOrderAscRoomRoomNumberAsc(TASK_DATE);
@@ -171,8 +176,8 @@ class TaskAllocationControllerIntegrationTest {
         StaffProfile refreshedHigherHistorical = staffProfileRepository.findById(higherHistorical.getId()).orElseThrow();
         StaffProfile refreshedLowerHistorical = staffProfileRepository.findById(lowerHistorical.getId()).orElseThrow();
 
-        assertThat(refreshedHigherHistorical.getTotalMinutesWorked()).isEqualTo(495);
-        assertThat(refreshedLowerHistorical.getTotalMinutesWorked()).isEqualTo(310);
+        assertThat(refreshedHigherHistorical.getTotalMinutesWorked()).isEqualTo(300);
+        assertThat(refreshedLowerHistorical.getTotalMinutesWorked()).isEqualTo(100);
 
         mockMvc.perform(get("/api/allocation")
                         .header("Authorization", "Bearer " + accessToken)
@@ -182,6 +187,236 @@ class TaskAllocationControllerIntegrationTest {
                 .andExpect(jsonPath("$.summary.unassignedTasks").value(0))
                 .andExpect(jsonPath("$.assignments.length()").value(8))
                 .andExpect(jsonPath("$.unassigned.length()").value(0));
+    }
+
+    @Test
+    void runAllocationOverridesPreferredShiftWhenNeededToAvoidShortage() throws Exception {
+        createStaff("staff-a", "Morning Preferred", morningShift, 10);
+        createStaff("staff-b", "Afternoon Preferred", afternoonShift, 20);
+
+        createStay(201, TASK_DATE.minusDays(2), TASK_DATE);
+        createStay(202, TASK_DATE.minusDays(2), TASK_DATE);
+        createStay(203, TASK_DATE.minusDays(2), TASK_DATE);
+
+        mockMvc.perform(post("/api/allocation/run")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "taskDate":"%s"
+                                }
+                                """.formatted(TASK_DATE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summary.totalTasks").value(3))
+                .andExpect(jsonPath("$.summary.assignedTasks").value(3))
+                .andExpect(jsonPath("$.summary.unassignedTasks").value(0))
+                .andExpect(jsonPath("$.assignments.length()").value(3))
+                .andExpect(jsonPath("$.unassigned.length()").value(0));
+
+        List<TaskAssignment> assignments = taskAssignmentRepository.findAllByTaskDate(TASK_DATE);
+        assertThat(assignments).hasSize(3);
+        assertThat(assignments.stream().map(TaskAssignment::getCleaningTask))
+                .allMatch(task -> task.getTaskType() == TaskType.DEEP_CLEAN);
+        assertThat(assignments.stream().map(TaskAssignment::getStaff).map(StaffProfile::getFullName))
+                .contains("Morning Preferred", "Afternoon Preferred");
+        assertThat(assignments.stream()
+                .filter(assignment -> !assignment.getCleaningTask().getShift().getId().equals(assignment.getStaff().getPreferredShift().getId()))
+                .count()).isGreaterThan(0L);
+    }
+
+    @Test
+    void runAllocationAssignsExactFitTenCheckoutRoomsAcrossFiveWorkers() throws Exception {
+        for (int index = 0; index < 5; index++) {
+            Shift preferredShift = index % 2 == 0 ? morningShift : afternoonShift;
+            createStaff("staff-fit-" + index, "Fit Staff " + index, preferredShift, index * 10);
+        }
+
+        for (int roomNumber = 501; roomNumber <= 510; roomNumber++) {
+            createStay(roomNumber, TASK_DATE.minusDays(2), TASK_DATE);
+        }
+
+        mockMvc.perform(post("/api/allocation/run")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "taskDate":"%s"
+                                }
+                                """.formatted(TASK_DATE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summary.totalTasks").value(10))
+                .andExpect(jsonPath("$.summary.assignedTasks").value(10))
+                .andExpect(jsonPath("$.summary.unassignedTasks").value(0))
+                .andExpect(jsonPath("$.assignments.length()").value(10))
+                .andExpect(jsonPath("$.unassigned.length()").value(0));
+
+        List<TaskAssignment> assignments = taskAssignmentRepository.findAllByTaskDate(TASK_DATE);
+        assertThat(assignments).hasSize(10);
+        assertThat(assignments.stream().map(TaskAssignment::getCleaningTask))
+                .allMatch(task -> task.getTaskType() == TaskType.DEEP_CLEAN);
+
+        assertThat(assignments.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        assignment -> assignment.getStaff().getFullName(),
+                        java.util.stream.Collectors.summingInt(assignment -> assignment.getCleaningTask().getEstimatedMinutes())
+                )))
+                .hasSize(5)
+                .allSatisfy((staffName, totalMinutes) -> assertThat(totalMinutes).isEqualTo(240));
+    }
+
+    @Test
+    void runAllocationLeavesOneCheckoutUnassignedWhenDeepCleanDemandExceedsCapacity() throws Exception {
+        for (int index = 0; index < 5; index++) {
+            Shift preferredShift = index % 2 == 0 ? morningShift : afternoonShift;
+            createStaff("staff-overflow-" + index, "Overflow Staff " + index, preferredShift, 0);
+        }
+
+        for (int roomNumber = 601; roomNumber <= 611; roomNumber++) {
+            createStay(roomNumber, TASK_DATE.minusDays(2), TASK_DATE);
+        }
+
+        mockMvc.perform(post("/api/allocation/run")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "taskDate":"%s"
+                                }
+                                """.formatted(TASK_DATE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summary.totalTasks").value(11))
+                .andExpect(jsonPath("$.summary.assignedTasks").value(10))
+                .andExpect(jsonPath("$.summary.unassignedTasks").value(1))
+                .andExpect(jsonPath("$.assignments.length()").value(10))
+                .andExpect(jsonPath("$.unassigned.length()").value(1))
+                .andExpect(jsonPath("$.unassigned[0].taskType").value("DEEP_CLEAN"));
+    }
+
+    @Test
+    void runAllocationUsesHistoricalMinutesAsFairnessTieBreakerWhenPreferenceAlsoMatches() throws Exception {
+        StaffProfile lowerHistorical = createStaff("staff-low", "Lower Historical", morningShift, 60);
+        StaffProfile higherHistorical = createStaff("staff-high", "Higher Historical", morningShift, 300);
+        createStay(701, TASK_DATE.minusDays(2), TASK_DATE);
+
+        mockMvc.perform(post("/api/allocation/run")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "taskDate":"%s"
+                                }
+                                """.formatted(TASK_DATE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summary.totalTasks").value(1))
+                .andExpect(jsonPath("$.summary.assignedTasks").value(1))
+                .andExpect(jsonPath("$.summary.unassignedTasks").value(0))
+                .andExpect(jsonPath("$.assignments[0].staffName").value("Lower Historical"))
+                .andExpect(jsonPath("$.assignments[0].preferredShiftMatched").value(true));
+
+        StaffProfile refreshedLowerHistorical = staffProfileRepository.findById(lowerHistorical.getId()).orElseThrow();
+        StaffProfile refreshedHigherHistorical = staffProfileRepository.findById(higherHistorical.getId()).orElseThrow();
+
+        assertThat(refreshedLowerHistorical.getTotalMinutesWorked()).isEqualTo(60);
+        assertThat(refreshedHigherHistorical.getTotalMinutesWorked()).isEqualTo(300);
+    }
+
+    @Test
+    void runAllocationLeavesTasksUnassignedWhenDailyCapacityIsExhausted() throws Exception {
+        createStaff("staff-a", "Morning Only", morningShift, 0);
+
+        for (int roomNumber = 301; roomNumber <= 317; roomNumber++) {
+            createStay(roomNumber, TASK_DATE.minusDays(1), TASK_DATE.plusDays(1));
+        }
+
+        mockMvc.perform(post("/api/allocation/run")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "taskDate":"%s"
+                                }
+                                """.formatted(TASK_DATE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summary.totalTasks").value(17))
+                .andExpect(jsonPath("$.summary.assignedTasks").value(8))
+                .andExpect(jsonPath("$.summary.unassignedTasks").value(9))
+                .andExpect(jsonPath("$.unassigned.length()").value(9));
+
+        List<TaskAssignment> assignments = taskAssignmentRepository.findAllByTaskDate(TASK_DATE);
+        assertThat(assignments).hasSize(8);
+        assertThat(assignments.stream()
+                .map(TaskAssignment::getCleaningTask)
+                .mapToInt(CleaningTask::getEstimatedMinutes)
+                .sum()).isEqualTo(240);
+        assertThat(assignments.stream()
+                .map(TaskAssignment::getCleaningTask)
+                .map(task -> task.getShift().getId())
+                .distinct()).containsExactly(morningShift.getId());
+    }
+
+    @Test
+    void runAllocationUsesMorningDeepCleanBucketForDailyTasksAfterMorningGeneralBucketFills() throws Exception {
+        createStaff("staff-morning", "Morning Preferred", morningShift, 0);
+
+        for (int roomNumber = 801; roomNumber <= 806; roomNumber++) {
+            createStay(roomNumber, TASK_DATE.minusDays(1), TASK_DATE.plusDays(1));
+        }
+
+        mockMvc.perform(post("/api/allocation/run")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "taskDate":"%s"
+                                }
+                                """.formatted(TASK_DATE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summary.totalTasks").value(6))
+                .andExpect(jsonPath("$.summary.assignedTasks").value(6))
+                .andExpect(jsonPath("$.summary.unassignedTasks").value(0))
+                .andExpect(jsonPath("$.assignments.length()").value(6))
+                .andExpect(jsonPath("$.unassigned.length()").value(0));
+
+        List<TaskAssignment> assignments = taskAssignmentRepository.findAllByTaskDate(TASK_DATE);
+        assertThat(assignments).hasSize(6);
+        assertThat(assignments.stream().map(TaskAssignment::getCleaningTask))
+                .allMatch(task -> task.getTaskType() == TaskType.DAILY_CLEAN);
+        assertThat(assignments.stream()
+                .map(TaskAssignment::getStaff)
+                .map(StaffProfile::getFullName))
+                .containsOnly("Morning Preferred");
+        assertThat(assignments.stream()
+                .map(TaskAssignment::getCleaningTask)
+                .allMatch(task -> morningShift.getId().equals(task.getShift().getId()))).isTrue();
+    }
+
+    @Test
+    void getAllocationKeepsUnassignedTasksVisibleAfterRun() throws Exception {
+        StaffProfile availableStaff = createStaff("staff-a", "Available Staff", morningShift, 0);
+        createLeave(availableStaff, TASK_DATE.minusDays(1), TASK_DATE.plusDays(1));
+        createStay(401, TASK_DATE.minusDays(1), TASK_DATE.plusDays(1));
+
+        mockMvc.perform(post("/api/allocation/run")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "taskDate":"%s"
+                                }
+                                """.formatted(TASK_DATE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summary.assignedTasks").value(0))
+                .andExpect(jsonPath("$.summary.unassignedTasks").value(1))
+                .andExpect(jsonPath("$.unassigned[0].taskType").value("DAILY_CLEAN"));
+
+        mockMvc.perform(get("/api/allocation")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .param("taskDate", TASK_DATE.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summary.assignedTasks").value(0))
+                .andExpect(jsonPath("$.summary.unassignedTasks").value(1))
+                .andExpect(jsonPath("$.assignments.length()").value(0))
+                .andExpect(jsonPath("$.unassigned.length()").value(1));
     }
 
     private StaffProfile createStaff(String username, String fullName, Shift shift, int totalMinutesWorked) {
@@ -196,9 +431,20 @@ class TaskAllocationControllerIntegrationTest {
                 .fullName(fullName)
                 .email(username + "@housekeeping.local")
                 .phone("+15550000000")
-                .currentShift(shift)
+                .preferredShift(shift)
                 .availabilityStatus(AvailabilityStatus.OFF_DUTY)
                 .totalMinutesWorked(totalMinutesWorked)
+                .build());
+    }
+
+    private LeaveRequest createLeave(StaffProfile staff, LocalDate leaveStartDate, LocalDate leaveEndDate) {
+        return leaveRequestRepository.save(LeaveRequest.builder()
+                .staff(staff)
+                .leaveStartDate(leaveStartDate)
+                .leaveEndDate(leaveEndDate)
+                .leaveType("SICK")
+                .reason("Planned leave")
+                .status("APPROVED")
                 .build());
     }
 
