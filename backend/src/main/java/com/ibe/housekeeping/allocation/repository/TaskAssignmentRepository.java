@@ -85,6 +85,23 @@ public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, 
             from TaskAssignment assignment
             join fetch assignment.cleaningTask task
             join fetch task.room room
+            left join fetch task.shift shift
+            left join fetch task.sourceStay sourceStay
+            left join fetch assignment.staff staff
+            left join fetch staff.preferredShift preferredShift
+            where task.id = :taskId
+              and staff.id = :staffId
+            """)
+    Optional<TaskAssignment> findByCleaningTaskIdAndStaffId(
+            @Param("taskId") UUID taskId,
+            @Param("staffId") UUID staffId
+    );
+
+    @Query("""
+            select assignment
+            from TaskAssignment assignment
+            join fetch assignment.cleaningTask task
+            join fetch task.room room
             join fetch task.shift shift
             left join fetch assignment.staff staff
             left join fetch staff.preferredShift preferredShift
