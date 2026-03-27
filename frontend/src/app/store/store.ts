@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit'
 
 import { authReducer } from '../../features/auth/slice'
+import { leaveReducer } from '../../features/staff-portal/leave/slice'
 import { baseApi } from '../../shared/api/baseApi'
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    leaveUi: leaveReducer,
     [baseApi.reducerPath]: baseApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>

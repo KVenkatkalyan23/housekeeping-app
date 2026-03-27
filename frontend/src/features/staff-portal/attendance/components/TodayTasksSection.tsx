@@ -187,7 +187,7 @@ function TaskCard({
 export function TodayTaskProgressSection() {
   const { data: workload, isLoading, isError } = useGetTodayWorkloadQuery()
 
-  if (isLoading || isError || !workload || workload.totalTaskCount === 0) {
+  if (isLoading || isError || !workload) {
     return null
   }
 

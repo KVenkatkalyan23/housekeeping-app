@@ -1,15 +1,16 @@
-import type { LeaveHistoryItemResponse } from '../types'
+import type { LeaveListItem } from '../types'
 import { LeaveHistoryCard } from './LeaveHistoryCard'
 
 interface LeaveHistoryListProps {
-  items: LeaveHistoryItemResponse[]
+  items: LeaveListItem[]
+  showStaffDetails?: boolean
 }
 
-export function LeaveHistoryList({ items }: LeaveHistoryListProps) {
+export function LeaveHistoryList({ items, showStaffDetails = false }: LeaveHistoryListProps) {
   return (
     <div className="mt-6 space-y-3.5">
       {items.map((item) => (
-        <LeaveHistoryCard key={item.leaveRequestId} item={item} />
+        <LeaveHistoryCard key={item.leaveId} item={item} showStaffDetails={showStaffDetails} />
       ))}
     </div>
   )
