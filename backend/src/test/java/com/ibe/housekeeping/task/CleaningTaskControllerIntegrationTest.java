@@ -12,6 +12,7 @@ import com.ibe.housekeeping.entity.RoomStay;
 import com.ibe.housekeeping.entity.User;
 import com.ibe.housekeeping.room.repository.RoomRepository;
 import com.ibe.housekeeping.roomstay.repository.RoomStayRepository;
+import com.ibe.housekeeping.staff.repository.StaffProfileRepository;
 import com.ibe.housekeeping.task.repository.CleaningTaskRepository;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,6 +58,9 @@ class CleaningTaskControllerIntegrationTest {
     private TaskAssignmentRepository taskAssignmentRepository;
 
     @Autowired
+    private StaffProfileRepository staffProfileRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private String accessToken;
@@ -67,6 +71,7 @@ class CleaningTaskControllerIntegrationTest {
         cleaningTaskRepository.deleteAll();
         roomStayRepository.deleteAll();
         roomRepository.deleteAll();
+        staffProfileRepository.deleteAll();
         userRepository.deleteAll();
 
         userRepository.save(User.builder()

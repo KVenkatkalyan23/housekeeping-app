@@ -6,6 +6,8 @@ import com.ibe.housekeeping.auth.dto.LoginRequest;
 import com.ibe.housekeeping.auth.repository.UserRepository;
 import com.ibe.housekeeping.allocation.repository.TaskAssignmentRepository;
 import com.ibe.housekeeping.common.enums.AvailabilityStatus;
+import com.ibe.housekeeping.common.enums.LeaveStatus;
+import com.ibe.housekeeping.common.enums.LeaveType;
 import com.ibe.housekeeping.common.enums.Role;
 import com.ibe.housekeeping.common.enums.RoomStatus;
 import com.ibe.housekeeping.common.enums.TaskStatus;
@@ -442,9 +444,9 @@ class TaskAllocationControllerIntegrationTest {
                 .staff(staff)
                 .leaveStartDate(leaveStartDate)
                 .leaveEndDate(leaveEndDate)
-                .leaveType("SICK")
+                .leaveType(LeaveType.SICK)
                 .reason("Planned leave")
-                .status("APPROVED")
+                .status(LeaveStatus.APPROVED)
                 .build());
     }
 
