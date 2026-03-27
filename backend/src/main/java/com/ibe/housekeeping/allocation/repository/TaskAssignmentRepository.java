@@ -4,6 +4,7 @@ import com.ibe.housekeeping.entity.TaskAssignment;
 import java.util.Collection;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -59,5 +60,33 @@ public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, 
     List<TaskAssignment> findAllByTaskDateAndShiftIds(
             @Param("taskDate") LocalDate taskDate,
             @Param("shiftIds") List<UUID> shiftIds
+    );
+
+    @Query("""
+            select assignment
+            from TaskAssignment assignment
+            join fetch assignment.cleaningTask task
+            join fetch task.room room
+            left join fetch task.shift shift
+            left join fetch task.sourceStay sourceStay
+            where assignment.staff.id = :staffId
+              and task.taskDate = :taskDate
+            order by task.priorityOrder asc, room.roomNumber asc, task.id asc
+            """)
+    List<TaskAssignment> findAllByStaffIdAndTaskDate(
+            @Param("staffId") UUID staffId,
+            @Param("taskDate") LocalDate taskDate
+    );
+
+    @Query("""
+            select assignment
+            from TaskAssignment assignment
+            join fetch assignment.cleaningTask task
+            where task.id = :taskId
+              and assignment.staff.id = :staffId
+            """)
+    Optional<TaskAssignment> findByCleaningTaskIdAndStaffId(
+            @Param("taskId") UUID taskId,
+            @Param("staffId") UUID staffId
     );
 }

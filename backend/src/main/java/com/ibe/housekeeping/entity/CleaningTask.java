@@ -89,6 +89,9 @@ public class CleaningTask {
     @JoinColumn(name = "source_stay_id")
     private RoomStay sourceStay;
 
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
