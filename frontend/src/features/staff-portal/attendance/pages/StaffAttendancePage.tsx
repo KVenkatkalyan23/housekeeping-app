@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
 import type { AppDispatch, RootState } from "../../../../app/store";
+import { baseApi } from "../../../../shared/api/baseApi";
 import { clearPersistedAuthState, logout } from "../../../auth/slice";
 import {
   useClockInMutation,
@@ -14,7 +15,10 @@ import { ClockControls } from "../components/ClockControls";
 import { LeaveSection } from "../components/LeaveSection";
 import { LogoutConfirmModal } from "../components/LogoutConfirmModal";
 import { ShiftStatusCard } from "../components/ShiftStatusCard";
-import { TodayTasksSection } from "../components/TodayTasksSection";
+import {
+  TodayTaskProgressSection,
+  TodayTasksSection,
+} from "../components/TodayTasksSection";
 
 function resolveErrorMessage(error: unknown) {
   if (!error || typeof error !== "object") {
@@ -145,12 +149,14 @@ export function StaffAttendancePage() {
     }
 
     clearPersistedAuthState();
+    dispatch(baseApi.util.resetApiState());
     dispatch(logout());
   };
 
   const confirmLogout = () => {
     setShowLogoutConfirm(false);
     clearPersistedAuthState();
+    dispatch(baseApi.util.resetApiState());
     dispatch(logout());
   };
 
@@ -204,6 +210,7 @@ export function StaffAttendancePage() {
             {data ? (
               <div className="space-y-4">
                 <ShiftStatusCard attendance={data} />
+                <TodayTaskProgressSection />
                 <ClockControls
                   isOnDuty={data.onDuty}
                   isClockingIn={isClockingIn}

@@ -165,6 +165,8 @@ class StaffWorkboardControllerIntegrationTest {
 
     @Test
     void markTaskCompleteUpdatesStatusAndTimestamp() throws Exception {
+        staffProfile.setAvailabilityStatus(AvailabilityStatus.ON_DUTY);
+        staffProfileRepository.save(staffProfile);
         CleaningTask task = assignTask(staffProfile, 401, TaskType.DAILY_CLEAN, 30, TaskStatus.ASSIGNED, TODAY);
 
         mockMvc.perform(post("/api/staff/tasks/" + task.getId() + "/complete")
@@ -190,6 +192,8 @@ class StaffWorkboardControllerIntegrationTest {
 
     @Test
     void markTaskCompleteRejectsTasksAssignedToAnotherStaffOrAlreadyCompleted() throws Exception {
+        staffProfile.setAvailabilityStatus(AvailabilityStatus.ON_DUTY);
+        staffProfileRepository.save(staffProfile);
         CleaningTask otherStaffTask = assignTask(otherStaffProfile, 501, TaskType.DAILY_CLEAN, 30, TaskStatus.ASSIGNED, TODAY);
         CleaningTask completedTask = assignTask(staffProfile, 502, TaskType.DEEP_CLEAN, 120, TaskStatus.COMPLETED, TODAY);
 
@@ -204,6 +208,16 @@ class StaffWorkboardControllerIntegrationTest {
                 .andExpect(jsonPath("$.error.message").value("Task is already completed."));
     }
 
+
+    @Test
+    void markTaskCompleteRejectsOffDutyStaff() throws Exception {
+        CleaningTask task = assignTask(staffProfile, 503, TaskType.DAILY_CLEAN, 30, TaskStatus.ASSIGNED, TODAY);
+
+        mockMvc.perform(post("/api/staff/tasks/" + task.getId() + "/complete")
+                        .header("Authorization", "Bearer " + staffToken))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.message").value("You must be on duty to complete tasks."));
+    }
     @Test
     void workboardEndpointsAreStaffOnly() throws Exception {
         mockMvc.perform(get("/api/staff/tasks/today")
@@ -259,3 +273,5 @@ class StaffWorkboardControllerIntegrationTest {
         return jsonNode.get("accessToken").asText();
     }
 }
+
+
