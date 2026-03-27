@@ -30,7 +30,7 @@ export const attendanceApi = baseApi.injectEndpoints({
         url: "/attendance/clock-out",
         method: "POST",
       }),
-      invalidatesTags: ["Attendance"],
+      invalidatesTags: ["Attendance", "StaffWorkboard"],
     }),
     getWeeklyAttendanceHistory: builder.query<
       WeeklyAttendanceHistoryResponse,

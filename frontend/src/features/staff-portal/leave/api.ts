@@ -14,7 +14,7 @@ export const leaveApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Leave'],
+      invalidatesTags: ['Leave', 'StaffWorkboard', 'Attendance'],
     }),
     getMyLeaves: builder.query<
       MyLeavesResponse,
