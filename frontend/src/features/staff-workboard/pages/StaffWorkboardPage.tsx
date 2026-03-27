@@ -1,9 +1,15 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "react-toastify";
 
 import {
   useGetMyAssignedTasksQuery,
   useGetMyWorkloadQuery,
+  useMarkTaskCompleteMutation,
 } from "../api";
+import { AssignedTasksList } from "../components/AssignedTasksList";
+import { WorkboardHeader } from "../components/WorkboardHeader";
+import { WorkloadSummaryCard } from "../components/WorkloadSummaryCard";
+import { BottomNav } from "../../staff-portal/attendance/components/BottomNav";
 
 function resolveErrorMessage(error: unknown) {
   if (!error || typeof error !== "object") {
@@ -23,48 +29,14 @@ function resolveErrorMessage(error: unknown) {
   );
 }
 
-function formatDateLabel(date: string | undefined) {
-  if (!date) {
-    return "Today";
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(new Date(`${date}T00:00:00`));
-}
-
-function getTaskTypeLabel(taskType: string) {
-  switch (taskType) {
-    case "DEEP_CLEAN":
-      return "Checkout Cleaning";
-    case "DAILY_CLEAN":
-      return "Daily Cleaning";
-    case "VACANT_CLEAN":
-      return "Vacant Cleaning";
-    default:
-      return taskType;
-  }
-}
-
-function getStatusTone(status: string) {
-  switch (status) {
-    case "COMPLETED":
-      return "bg-[#dcfce7] text-[#166534]";
-    case "IN_PROGRESS":
-      return "bg-[#dbeafe] text-[#1d4ed8]";
-    case "ASSIGNED":
-      return "bg-[#fef3c7] text-[#92400e]";
-    default:
-      return "bg-slate-100 text-slate-500";
-  }
-}
-
 export function StaffWorkboardPage() {
+  const [markCompleteLoadingTaskId, setMarkCompleteLoadingTaskId] = useState<
+    string | null
+  >(null);
   const {
     data: tasksData,
     isLoading: tasksLoading,
+    isFetching: tasksFetching,
     isError: tasksError,
     error: tasksErrorData,
     refetch: refetchTasks,
@@ -76,6 +48,7 @@ export function StaffWorkboardPage() {
     error: workloadErrorData,
     refetch: refetchWorkload,
   } = useGetMyWorkloadQuery();
+  const [markTaskComplete] = useMarkTaskCompleteMutation();
 
   const errorMessage = useMemo(() => {
     if (tasksError) {
@@ -88,6 +61,21 @@ export function StaffWorkboardPage() {
 
     return null;
   }, [tasksError, tasksErrorData, workloadError, workloadErrorData]);
+
+  const handleMarkComplete = async (taskId: string) => {
+    setMarkCompleteLoadingTaskId(taskId);
+
+    try {
+      const response = await markTaskComplete(taskId).unwrap();
+      toast.success(response.message);
+    } catch (error) {
+      toast.error(resolveErrorMessage(error));
+      refetchTasks();
+      refetchWorkload();
+    } finally {
+      setMarkCompleteLoadingTaskId(null);
+    }
+  };
 
   if (tasksLoading || workloadLoading) {
     return (
@@ -128,95 +116,25 @@ export function StaffWorkboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f3f8] pb-24 text-slate-700">
+    <main className="min-h-screen bg-[#f4f3f8] pb-36 text-slate-700">
       <div className="mx-auto max-w-md px-4 py-5">
-        <header className="rounded-[1.9rem] bg-white px-5 py-5 shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
-          <p className="text-[0.68rem] font-bold uppercase tracking-[0.22em] text-[#7aa4e6]">
-            Staff Workboard
+        <WorkboardHeader date={tasksData.date} />
+        <WorkloadSummaryCard workload={workload} />
+
+        {tasksFetching ? (
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Refreshing workboard...
           </p>
-          <h1 className="mt-2 text-[2rem] font-semibold tracking-[-0.05em] text-slate-900">
-            My Tasks
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Assigned work for {formatDateLabel(tasksData.date)}.
-          </p>
-        </header>
+        ) : null}
 
-        <section className="mt-5 rounded-[1.9rem] bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                Assigned Minutes
-              </p>
-              <p className="mt-2 text-[2.2rem] font-semibold tracking-[-0.06em] text-slate-900">
-                {workload.assignedMinutes}
-              </p>
-            </div>
-            <div className="rounded-full bg-[#e0ecff] px-4 py-2 text-sm font-semibold text-[#1664c0]">
-              {workload.completionPercentage}% complete
-            </div>
-          </div>
-
-          <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-[1.3rem] bg-[#f8fafc] px-4 py-3">
-              <p className="text-slate-400">Completed</p>
-              <p className="mt-1 font-semibold text-slate-800">
-                {workload.completedMinutes} min · {workload.completedTaskCount} tasks
-              </p>
-            </div>
-            <div className="rounded-[1.3rem] bg-[#f8fafc] px-4 py-3">
-              <p className="text-slate-400">Pending</p>
-              <p className="mt-1 font-semibold text-slate-800">
-                {workload.pendingMinutes} min · {workload.pendingTaskCount} tasks
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {tasksData.tasks.length === 0 ? (
-          <section className="mt-5 rounded-[1.75rem] bg-white p-6 text-center shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
-            <h2 className="text-lg font-semibold text-slate-900">
-              No tasks assigned for today
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Your workboard will update automatically when new tasks are assigned.
-            </p>
-          </section>
-        ) : (
-          <section className="mt-5 space-y-3.5">
-            {tasksData.tasks.map((task) => (
-              <article
-                key={task.taskId}
-                className="rounded-[1.6rem] bg-white px-4 py-4 shadow-[0_14px_40px_rgba(15,23,42,0.08)]"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-[1.85rem] font-semibold leading-none text-slate-900">
-                        {task.roomNumber}
-                      </h2>
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.16em] ${getStatusTone(
-                          task.taskStatus
-                        )}`}
-                      >
-                        {task.taskStatus}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm font-semibold text-slate-700">
-                      {getTaskTypeLabel(task.taskType)}
-                    </p>
-                    <p className="mt-2 text-xs uppercase tracking-[0.14em] text-slate-400">
-                      {task.estimatedMinutes} min
-                      {task.shiftName ? ` · ${task.shiftName}` : ""}
-                    </p>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </section>
-        )}
+        <AssignedTasksList
+          tasks={tasksData.tasks}
+          markCompleteLoadingTaskId={markCompleteLoadingTaskId}
+          onMarkComplete={handleMarkComplete}
+        />
       </div>
+
+      <BottomNav activeTab="tasks" />
     </main>
   );
 }
