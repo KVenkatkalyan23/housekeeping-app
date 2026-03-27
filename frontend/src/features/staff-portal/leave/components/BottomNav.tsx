@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 
 const items = [
-  { label: 'Tasks', path: '/staff/attendance' },
+  { label: 'Tasks', path: '/staff/tasks' },
   { label: 'Attendance', path: '/staff/attendance/history' },
   { label: 'Leave', path: '/staff/leave' },
   { label: 'Profile', path: '/staff/profile' },

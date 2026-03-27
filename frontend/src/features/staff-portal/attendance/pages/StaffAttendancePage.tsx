@@ -211,7 +211,7 @@ export function StaffAttendancePage() {
           <LeaveSection />
         </div>
 
-        <BottomNav activeTab="tasks" />
+        <BottomNav activeTab="attendance" />
       </main>
 
       <LogoutConfirmModal
