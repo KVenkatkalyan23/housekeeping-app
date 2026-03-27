@@ -1,4 +1,11 @@
 export type AvailabilityStatus = 'ON_DUTY' | 'OFF_DUTY'
+export type StaffTaskStatus =
+  | 'PENDING'
+  | 'ASSIGNED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED'
+export type StaffTaskType = 'DEEP_CLEAN' | 'DAILY_CLEAN' | 'VACANT_CLEAN'
 
 export interface AttendanceStatusResponse {
   onDuty: boolean
@@ -64,4 +71,36 @@ export interface WeeklyAttendanceHistoryResponse {
     hasPrevious: boolean
     hasNext: boolean
   }
+}
+
+export interface AssignedTaskItem {
+  taskId: string
+  roomId: string
+  roomNumber: number
+  taskType: StaffTaskType
+  taskStatus: StaffTaskStatus
+  estimatedMinutes: number
+  priorityOrder: number
+  shiftId: string | null
+  shiftCode: string | null
+  shiftName: string | null
+  completedAt: string | null
+  sourceStayId: string | null
+}
+
+export interface WorkloadSummaryResponse {
+  assignedMinutes: number
+  completedMinutes: number
+  pendingMinutes: number
+  totalTaskCount: number
+  completedTaskCount: number
+  pendingTaskCount: number
+  completionPercentage: number
+}
+
+export interface MarkTaskCompleteResponse {
+  taskId: string
+  taskStatus: StaffTaskStatus
+  completedAt: string
+  message: string
 }

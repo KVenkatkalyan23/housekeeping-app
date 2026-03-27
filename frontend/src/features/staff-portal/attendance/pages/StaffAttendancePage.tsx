@@ -95,6 +95,39 @@ function PortalHeader({
   );
 }
 
+function AttendanceLoadingCard() {
+  return (
+    <div className="space-y-4">
+      <div className="h-44 animate-pulse rounded-[1.75rem] bg-white" />
+      <div className="h-28 animate-pulse rounded-[1.75rem] bg-white" />
+    </div>
+  );
+}
+
+function AttendanceErrorCard({
+  error,
+  onRetry,
+}: {
+  error: unknown;
+  onRetry: () => void;
+}) {
+  return (
+    <section className="rounded-[1.75rem] bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
+      <h2 className="text-lg font-semibold text-slate-900">Unable to load attendance</h2>
+      <p className="mt-2 text-sm leading-6 text-slate-500">
+        {resolveErrorMessage(error)}
+      </p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-4 h-11 rounded-full bg-[#1664c0] px-5 text-sm font-semibold text-white"
+      >
+        Retry
+      </button>
+    </section>
+  );
+}
+
 export function StaffAttendancePage() {
   const dispatch = useDispatch<AppDispatch>();
   const username = useSelector((state: RootState) => state.auth.username);
@@ -145,69 +178,43 @@ export function StaffAttendancePage() {
     setShowClockOutConfirm(true);
   };
 
-  if (isLoading) {
-    return (
-      <main className="min-h-screen bg-[#f4f3f8] px-4 py-6 text-slate-700">
-        <div className="mx-auto max-w-md animate-pulse space-y-4">
-          <div className="h-16 rounded-[1.5rem] bg-white" />
-          <div className="h-44 rounded-[1.75rem] bg-white" />
-          <div className="h-28 rounded-[1.75rem] bg-white" />
-          <div className="h-36 rounded-[1.75rem] bg-white" />
-        </div>
-      </main>
-    );
-  }
-
-  if (isError || !data) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f4f3f8] px-4">
-        <div className="w-full max-w-sm rounded-[1.75rem] bg-white p-6 text-center shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
-          <h1 className="text-xl font-semibold text-slate-900">
-            Unable to load attendance
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            {resolveErrorMessage(error)}
-          </p>
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="mt-5 h-11 rounded-full bg-[#1664c0] px-5 text-sm font-semibold text-white"
-          >
-            Retry
-          </button>
-        </div>
-      </main>
-    );
-  }
-
   return (
     <>
       <main className="min-h-screen bg-[#f4f3f8] pb-36 text-slate-700">
         <div className="mx-auto max-w-md px-3 py-5">
           <PortalHeader
             username={username}
-            status={data.onDuty ? "On Duty" : "Off Duty"}
+            status={data?.onDuty ? "On Duty" : "Off Duty"}
             onLogout={handleLogout}
           />
 
-          <div className="mt-5 space-y-4">
-            <ShiftStatusCard attendance={data} />
-            <ClockControls
-              isOnDuty={data.onDuty}
-              isClockingIn={isClockingIn}
-              isClockingOut={isClockingOut}
-              onClockIn={handleClockIn}
-              onClockOut={handleClockOut}
-            />
-          </div>
+          <TodayTasksSection />
 
-          {isFetching ? (
+          {isFetching && data ? (
             <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
               Refreshing portal status...
             </p>
           ) : null}
 
-          <TodayTasksSection />
+          <div className="mt-5">
+            {isLoading ? <AttendanceLoadingCard /> : null}
+            {isError || !data ? (
+              <AttendanceErrorCard error={error} onRetry={() => refetch()} />
+            ) : null}
+            {data ? (
+              <div className="space-y-4">
+                <ShiftStatusCard attendance={data} />
+                <ClockControls
+                  isOnDuty={data.onDuty}
+                  isClockingIn={isClockingIn}
+                  isClockingOut={isClockingOut}
+                  onClockIn={handleClockIn}
+                  onClockOut={handleClockOut}
+                />
+              </div>
+            ) : null}
+          </div>
+
           <LeaveSection />
         </div>
 
