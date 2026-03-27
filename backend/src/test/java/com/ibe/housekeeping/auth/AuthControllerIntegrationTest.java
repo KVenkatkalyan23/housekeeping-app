@@ -2,6 +2,7 @@ package com.ibe.housekeeping.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibe.housekeeping.allocation.repository.TaskAssignmentRepository;
+import com.ibe.housekeeping.attendance.repository.AttendanceRepository;
 import com.ibe.housekeeping.auth.dto.CreateUserRequest;
 import com.ibe.housekeeping.auth.dto.LoginRequest;
 import com.ibe.housekeeping.auth.repository.UserRepository;
@@ -42,11 +43,15 @@ class AuthControllerIntegrationTest {
     private StaffProfileRepository staffProfileRepository;
 
     @Autowired
+    private AttendanceRepository attendanceRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void setUp() {
         taskAssignmentRepository.deleteAll();
+        attendanceRepository.deleteAll();
         staffProfileRepository.deleteAll();
         userRepository.deleteAll();
     }
