@@ -24,6 +24,40 @@ public interface CleaningTaskRepository extends JpaRepository<CleaningTask, UUID
     @Query("""
             select task
             from CleaningTask task
+            join TaskAssignment assignment on assignment.cleaningTask = task
+            join fetch task.room room
+            left join fetch task.shift shift
+            left join fetch task.sourceStay sourceStay
+            where assignment.staff.id = :staffId
+              and task.taskDate = :taskDate
+            order by task.priorityOrder asc, room.roomNumber asc, task.id asc
+            """)
+    List<CleaningTask> findAllAssignedToStaffByTaskDate(
+            @Param("staffId") UUID staffId,
+            @Param("taskDate") LocalDate taskDate
+    );
+
+    @Query("""
+            select task
+            from CleaningTask task
+            join TaskAssignment assignment on assignment.cleaningTask = task
+            join fetch task.room room
+            left join fetch task.shift shift
+            left join fetch task.sourceStay sourceStay
+            where assignment.staff.id = :staffId
+              and task.taskDate = :taskDate
+              and task.taskStatus = :taskStatus
+            order by task.priorityOrder asc, room.roomNumber asc, task.id asc
+            """)
+    List<CleaningTask> findAllAssignedToStaffByTaskDateAndTaskStatus(
+            @Param("staffId") UUID staffId,
+            @Param("taskDate") LocalDate taskDate,
+            @Param("taskStatus") TaskStatus taskStatus
+    );
+
+    @Query("""
+            select task
+            from CleaningTask task
             left join TaskAssignment assignment on assignment.cleaningTask = task
             join fetch task.room room
             left join fetch task.shift shift
