@@ -2,6 +2,7 @@ package com.ibe.housekeeping.staffworkboard.service;
 
 import com.ibe.housekeeping.allocation.repository.TaskAssignmentRepository;
 import com.ibe.housekeeping.auth.repository.UserRepository;
+import com.ibe.housekeeping.common.enums.AvailabilityStatus;
 import com.ibe.housekeeping.common.enums.TaskStatus;
 import com.ibe.housekeeping.entity.CleaningTask;
 import com.ibe.housekeeping.entity.Shift;
@@ -97,6 +98,14 @@ public class StaffWorkboardService {
     @Transactional
     public MarkTaskCompleteResponse markTaskComplete(String username, UUID taskId) {
         StaffProfile staffProfile = loadStaffProfile(username);
+
+        if (staffProfile.getAvailabilityStatus() != AvailabilityStatus.ON_DUTY) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "You must be on duty to complete tasks."
+            );
+        }
+
         TaskAssignment assignment = taskAssignmentRepository.findByCleaningTaskIdAndStaffId(taskId, staffProfile.getId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.FORBIDDEN,
@@ -162,4 +171,6 @@ public class StaffWorkboardService {
         );
     }
 }
+
+
 

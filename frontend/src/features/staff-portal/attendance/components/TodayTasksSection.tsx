@@ -1,6 +1,7 @@
 import { toast } from 'react-toastify'
 
 import {
+  useGetCurrentAttendanceQuery,
   useGetTodayAssignedTasksQuery,
   useGetTodayWorkloadQuery,
   useMarkTaskCompleteMutation,
@@ -60,18 +61,57 @@ function formatCompletedAt(value: string | null) {
   }).format(new Date(value))}`
 }
 
+function formatPercentage(value: number) {
+  return `${Math.max(0, Math.min(100, value))}%`
+}
+
+function TaskProgressCard({
+  completionPercentage,
+  completedMinutes,
+  assignedMinutes,
+}: {
+  completionPercentage: number
+  completedMinutes: number
+  assignedMinutes: number
+}) {
+  return (
+    <section className="rounded-[1.75rem] bg-white px-5 py-5 shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
+      <div className="flex items-center justify-between text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[#8aa0ca]">
+        <span>Today&apos;s Task Progress</span>
+        <span className="text-[#2a69c7]">{formatPercentage(completionPercentage)} Complete</span>
+      </div>
+
+      <div className="mt-4 h-3 rounded-full bg-[#e8edf7]">
+        <div
+          className="h-full rounded-full bg-[#2a69c7] transition-all"
+          style={{ width: formatPercentage(completionPercentage) }}
+        />
+      </div>
+
+      <div className="mt-3 flex items-center justify-between text-[0.78rem] font-semibold text-[#c2ccdb]">
+        <span>{completedMinutes} min done</span>
+        <span>{assignedMinutes} min assigned</span>
+      </div>
+    </section>
+  )
+}
+
 function TaskCard({
   task,
   isSubmitting,
+  isOnDuty,
   onMarkComplete,
 }: {
   task: AssignedTaskItem
   isSubmitting: boolean
+  isOnDuty: boolean
   onMarkComplete: (taskId: string) => void
 }) {
   const isDone = task.taskStatus === 'COMPLETED'
   const canComplete =
-    task.taskStatus === 'ASSIGNED' || task.taskStatus === 'IN_PROGRESS'
+    isOnDuty && (task.taskStatus === 'ASSIGNED' || task.taskStatus === 'IN_PROGRESS')
+  const showDisabledOffDutyAction =
+    !isOnDuty && (task.taskStatus === 'ASSIGNED' || task.taskStatus === 'IN_PROGRESS')
 
   return (
     <article
@@ -111,6 +151,15 @@ function TaskCard({
           >
             {isSubmitting ? 'Saving' : 'Done'}
           </button>
+        ) : showDisabledOffDutyAction ? (
+          <button
+            type="button"
+            disabled
+            title="Clock in to complete assigned tasks"
+            className="rounded-full border border-slate-200 bg-slate-100 px-3 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-slate-400 disabled:cursor-not-allowed"
+          >
+            Off Duty
+          </button>
         ) : (
           <div
             className={`flex h-8 w-8 items-center justify-center rounded-full border ${
@@ -135,11 +184,29 @@ function TaskCard({
   )
 }
 
+export function TodayTaskProgressSection() {
+  const { data: workload, isLoading, isError } = useGetTodayWorkloadQuery()
+
+  if (isLoading || isError || !workload || workload.totalTaskCount === 0) {
+    return null
+  }
+
+  return (
+    <TaskProgressCard
+      completionPercentage={workload.completionPercentage}
+      completedMinutes={workload.completedMinutes}
+      assignedMinutes={workload.assignedMinutes}
+    />
+  )
+}
+
 export function TodayTasksSection() {
+  const { data: attendance } = useGetCurrentAttendanceQuery()
   const { data, isLoading, isError, error, refetch } = useGetTodayAssignedTasksQuery()
   const { data: workload } = useGetTodayWorkloadQuery()
   const [markTaskComplete, { isLoading: isMarkingComplete, originalArgs }] =
     useMarkTaskCompleteMutation()
+  const isOnDuty = attendance?.onDuty ?? false
 
   const handleMarkComplete = async (taskId: string) => {
     try {
@@ -196,6 +263,7 @@ export function TodayTasksSection() {
           <span>
             {workload.completedMinutes} / {workload.assignedMinutes} min done
           </span>
+          {!isOnDuty ? <span className="text-amber-600">Clock in to complete tasks</span> : null}
         </div>
       ) : null}
 
@@ -206,6 +274,7 @@ export function TodayTasksSection() {
               key={task.taskId}
               task={task}
               isSubmitting={isMarkingComplete && originalArgs === task.taskId}
+              isOnDuty={isOnDuty}
               onMarkComplete={handleMarkComplete}
             />
           ))}
@@ -219,3 +288,5 @@ export function TodayTasksSection() {
     </section>
   )
 }
+
+

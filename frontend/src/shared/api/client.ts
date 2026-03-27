@@ -37,6 +37,7 @@ export const baseQueryWithAuth: BaseQueryFn<
 
   if (result.error?.status === 401) {
     clearPersistedAuthState();
+    api.dispatch({ type: "baseApi/resetApiState" });
     api.dispatch(logout());
 
     if (window.location.pathname !== "/login") {

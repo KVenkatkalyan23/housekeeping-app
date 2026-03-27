@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
 import type { AppDispatch } from '../../../app/store'
+import { baseApi } from '../../../shared/api/baseApi'
 import { getDefaultRouteForRole } from '../routing'
 import { createAuthStateFromLoginResponse, loginSuccess, persistAuthState } from '../slice'
 import { useLoginMutation } from '../api'
@@ -117,6 +118,7 @@ export function LoginForm() {
         password,
       }).unwrap()
 
+      dispatch(baseApi.util.resetApiState())
       persistAuthState(createAuthStateFromLoginResponse(response))
       dispatch(loginSuccess(response))
       toast.success(`Signed in as ${response.username}`)

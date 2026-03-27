@@ -2,6 +2,7 @@ import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
 import type { AppDispatch } from "../../../../app/store";
+import { baseApi } from "../../../../shared/api/baseApi";
 import { clearPersistedAuthState, logout } from "../../../auth/slice";
 import { useGetCurrentStaffProfileQuery } from "../api";
 import { BottomNav } from "../components/BottomNav";
@@ -36,6 +37,7 @@ export function ProfilePage() {
 
   const handleLogout = () => {
     clearPersistedAuthState();
+    dispatch(baseApi.util.resetApiState());
     dispatch(logout());
     navigate("/login", { replace: true });
   };
