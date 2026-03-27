@@ -33,6 +33,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -234,6 +235,118 @@ class StaffWorkboardControllerIntegrationTest {
         mockMvc.perform(get("/api/staff/tasks/workload")
                         .header("Authorization", "Bearer " + adminAccessToken))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void markTaskCompleteCompletesAssignedTaskAndSetsTimestamp() throws Exception {
+        CleaningTask task = cleaningTaskRepository.save(CleaningTask.builder()
+                .room(createRoom(411))
+                .taskDate(LocalDate.now())
+                .shift(morningShift)
+                .taskType(TaskType.DAILY_CLEAN)
+                .priorityOrder(1)
+                .estimatedMinutes(30)
+                .taskStatus(TaskStatus.ASSIGNED)
+                .build());
+
+        taskAssignmentRepository.save(TaskAssignment.builder()
+                .cleaningTask(task)
+                .staff(staffProfile)
+                .build());
+
+        mockMvc.perform(post("/api/staff/tasks/{taskId}/complete", task.getId())
+                        .header("Authorization", "Bearer " + staffAccessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.taskId").value(task.getId().toString()))
+                .andExpect(jsonPath("$.taskStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.completedAt").isNotEmpty())
+                .andExpect(jsonPath("$.message").value("Task marked as completed."));
+
+        CleaningTask savedTask = cleaningTaskRepository.findById(task.getId()).orElseThrow();
+        assertThat(savedTask.getTaskStatus()).isEqualTo(TaskStatus.COMPLETED);
+        assertThat(savedTask.getCompletedAt()).isNotNull();
+    }
+
+    @Test
+    void markTaskCompleteRejectsTaskAssignedToAnotherStaff() throws Exception {
+        User otherUser = userRepository.save(User.builder()
+                .username("other-complete")
+                .password(passwordEncoder.encode("password123"))
+                .role(Role.STAFF)
+                .build());
+
+        StaffProfile otherStaff = staffProfileRepository.save(StaffProfile.builder()
+                .user(otherUser)
+                .fullName("Other Complete")
+                .email("other-complete@housekeeping.local")
+                .phone("+15550000002")
+                .preferredShift(morningShift)
+                .availabilityStatus(AvailabilityStatus.OFF_DUTY)
+                .totalMinutesWorked(0)
+                .build());
+
+        CleaningTask task = cleaningTaskRepository.save(CleaningTask.builder()
+                .room(createRoom(412))
+                .taskDate(LocalDate.now())
+                .shift(morningShift)
+                .taskType(TaskType.DAILY_CLEAN)
+                .priorityOrder(1)
+                .estimatedMinutes(30)
+                .taskStatus(TaskStatus.ASSIGNED)
+                .build());
+
+        taskAssignmentRepository.save(TaskAssignment.builder()
+                .cleaningTask(task)
+                .staff(otherStaff)
+                .build());
+
+        mockMvc.perform(post("/api/staff/tasks/{taskId}/complete", task.getId())
+                        .header("Authorization", "Bearer " + staffAccessToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.message").value("You can only complete tasks assigned to you."));
+    }
+
+    @Test
+    void markTaskCompleteRejectsCompletedAndCancelledTasks() throws Exception {
+        CleaningTask completedTask = cleaningTaskRepository.save(CleaningTask.builder()
+                .room(createRoom(413))
+                .taskDate(LocalDate.now())
+                .shift(morningShift)
+                .taskType(TaskType.DAILY_CLEAN)
+                .priorityOrder(1)
+                .estimatedMinutes(30)
+                .taskStatus(TaskStatus.COMPLETED)
+                .completedAt(LocalDateTime.of(2026, 3, 27, 9, 0))
+                .build());
+
+        CleaningTask cancelledTask = cleaningTaskRepository.save(CleaningTask.builder()
+                .room(createRoom(414))
+                .taskDate(LocalDate.now())
+                .shift(morningShift)
+                .taskType(TaskType.VACANT_CLEAN)
+                .priorityOrder(2)
+                .estimatedMinutes(15)
+                .taskStatus(TaskStatus.CANCELLED)
+                .build());
+
+        taskAssignmentRepository.save(TaskAssignment.builder()
+                .cleaningTask(completedTask)
+                .staff(staffProfile)
+                .build());
+        taskAssignmentRepository.save(TaskAssignment.builder()
+                .cleaningTask(cancelledTask)
+                .staff(staffProfile)
+                .build());
+
+        mockMvc.perform(post("/api/staff/tasks/{taskId}/complete", completedTask.getId())
+                        .header("Authorization", "Bearer " + staffAccessToken))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.message").value("Task is already completed."));
+
+        mockMvc.perform(post("/api/staff/tasks/{taskId}/complete", cancelledTask.getId())
+                        .header("Authorization", "Bearer " + staffAccessToken))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.message").value("Cancelled tasks cannot be completed."));
     }
 
     private Room createRoom(int roomNumber) {
