@@ -1,17 +1,21 @@
 package com.ibe.housekeeping.leave.repository;
 
+import com.ibe.housekeeping.common.enums.LeaveStatus;
 import com.ibe.housekeeping.entity.LeaveRequest;
-import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID> {
 
-    List<LeaveRequest> findByStaffIdOrderByLeaveStartDateDesc(UUID staffId);
+    Page<LeaveRequest> findByStaffUserId(UUID userId, Pageable pageable);
 
-    boolean existsByStaffIdAndStatusIgnoreCaseAndLeaveStartDateLessThanEqualAndLeaveEndDateGreaterThanEqual(
+    Page<LeaveRequest> findAllByOrderByRequestedAtDesc(Pageable pageable);
+
+    boolean existsByStaffIdAndStatusAndLeaveStartDateLessThanEqualAndLeaveEndDateGreaterThanEqual(
             UUID staffId,
-            String status,
+            LeaveStatus status,
             java.time.LocalDate leaveEndDate,
             java.time.LocalDate leaveStartDate
     );

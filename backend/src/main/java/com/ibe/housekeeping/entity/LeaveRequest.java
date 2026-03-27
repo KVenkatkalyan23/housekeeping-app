@@ -1,7 +1,11 @@
 package com.ibe.housekeeping.entity;
 
+import com.ibe.housekeeping.common.enums.LeaveStatus;
+import com.ibe.housekeeping.common.enums.LeaveType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,7 +14,6 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
@@ -56,28 +59,24 @@ public class LeaveRequest {
     @Column(name = "leave_end_date", nullable = false)
     private LocalDate leaveEndDate;
 
-    @NotBlank
-    @Size(max = 20)
+    @NotNull
+    @Enumerated(EnumType.STRING)
     @Column(name = "leave_type", nullable = false, length = 20)
-    private String leaveType;
+    private LeaveType leaveType;
 
     @Size(max = 500)
     @Column(name = "reason", length = 500)
     private String reason;
 
     @Builder.Default
-    @NotBlank
-    @Size(max = 20)
+    @NotNull
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private String status = "APPROVED";
+    private LeaveStatus status = LeaveStatus.APPROVED;
 
     @CreationTimestamp
     @Column(name = "requested_at", nullable = false, updatable = false)
     private LocalDateTime requestedAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_user_id")
-    private User createdByUser;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
