@@ -5,6 +5,7 @@ import { ProtectedRoute } from "../../features/auth/components/ProtectedRoute";
 import { LoginPage } from "../../features/auth/pages/LoginPage";
 import { getDefaultRouteForRole } from "../../features/auth/routing";
 import { HomePage } from "../../features/dashboard/pages/HomePage";
+import { StaffWorkboardPage } from "../../features/staff-workboard/pages/StaffWorkboardPage";
 import { AttendanceHistoryPage } from "../../features/staff-portal/attendance/pages/AttendanceHistoryPage";
 import { StaffAttendancePage } from "../../features/staff-portal/attendance/pages/StaffAttendancePage";
 import { LeaveHistoryPage } from "../../features/staff-portal/leave/pages/LeaveHistoryPage";
@@ -57,6 +58,10 @@ export const router = createBrowserRouter([
       {
         path: "attendance",
         element: <StaffAttendancePage />,
+      },
+      {
+        path: "tasks",
+        element: <StaffWorkboardPage />,
       },
       {
         path: "attendance/history",
