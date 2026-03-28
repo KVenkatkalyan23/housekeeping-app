@@ -24,24 +24,9 @@ export interface AdminDashboardSlaPerformance {
   totalAssignedTasks: number
 }
 
-export interface AdminDashboardCapacityWorkloadPoint {
-  label: string
-  availableHours: number
-  requiredHours: number
-  peak: boolean
-}
-
 export interface AdminDashboardCapacityWorkload {
   availableTotalHours: number
   requiredTotalHours: number
-  timeSeries: AdminDashboardCapacityWorkloadPoint[]
-}
-
-export interface AdminDashboardResourceDiscrepancy {
-  requiredHours: number
-  availableHours: number
-  deltaHours: number
-  impactMessage: string
 }
 
 export interface AdminDashboardCurrentAdmin {
@@ -56,6 +41,5 @@ export interface AdminDashboardData {
   workforceEfficiency: AdminDashboardWorkforceEfficiency
   slaPerformance: AdminDashboardSlaPerformance
   capacityVsWorkload: AdminDashboardCapacityWorkload
-  resourceDiscrepancy: AdminDashboardResourceDiscrepancy
   currentAdmin: AdminDashboardCurrentAdmin
 }

@@ -1,14 +1,11 @@
 package com.ibe.housekeeping.admin.dashboard.dto;
 
-import java.util.List;
-
 public record AdminDashboardResponse(
         ShortfallAlert shortfallAlert,
         InventoryStatus inventoryStatus,
         WorkforceEfficiency workforceEfficiency,
         SlaPerformance slaPerformance,
         CapacityWorkload capacityVsWorkload,
-        ResourceDiscrepancy resourceDiscrepancy,
         CurrentAdmin currentAdmin
 ) {
 
@@ -44,24 +41,7 @@ public record AdminDashboardResponse(
 
     public record CapacityWorkload(
             double availableTotalHours,
-            double requiredTotalHours,
-            List<CapacityWorkloadPoint> timeSeries
-    ) {
-    }
-
-    public record CapacityWorkloadPoint(
-            String label,
-            double availableHours,
-            double requiredHours,
-            boolean peak
-    ) {
-    }
-
-    public record ResourceDiscrepancy(
-            double requiredHours,
-            double availableHours,
-            double deltaHours,
-            String impactMessage
+            double requiredTotalHours
     ) {
     }
 

@@ -158,8 +158,8 @@ class AdminDashboardControllerIntegrationTest {
                 .andExpect(jsonPath("$.inventoryStatus.vacantRooms").value(2))
                 .andExpect(jsonPath("$.workforceEfficiency.utilizationPercent").value(58))
                 .andExpect(jsonPath("$.slaPerformance.completionRate").value(50))
-                .andExpect(jsonPath("$.capacityVsWorkload.timeSeries.length()").value(6))
-                .andExpect(jsonPath("$.resourceDiscrepancy.requiredHours").value(7.0))
+                .andExpect(jsonPath("$.capacityVsWorkload.availableTotalHours").value(12.0))
+                .andExpect(jsonPath("$.capacityVsWorkload.requiredTotalHours").value(7.0))
                 .andExpect(jsonPath("$.currentAdmin.displayName").value("Admin User"))
                 .andExpect(jsonPath("$.currentAdmin.roleLabel").value("MASTER ADMIN"));
     }

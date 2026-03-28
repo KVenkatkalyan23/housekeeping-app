@@ -13,23 +13,12 @@ import com.ibe.housekeeping.staff.repository.StaffProfileRepository;
 import com.ibe.housekeeping.task.repository.CleaningTaskRepository;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AdminDashboardService {
-
-    private static final List<ChartSlot> CHART_SLOTS = List.of(
-            new ChartSlot("6AM", LocalTime.of(6, 0), LocalTime.of(9, 0), false),
-            new ChartSlot("9AM", LocalTime.of(9, 0), LocalTime.of(12, 0), false),
-            new ChartSlot("12PM", LocalTime.of(12, 0), LocalTime.of(15, 0), false),
-            new ChartSlot("3PM (PEAK)", LocalTime.of(15, 0), LocalTime.of(18, 0), true),
-            new ChartSlot("6PM", LocalTime.of(18, 0), LocalTime.of(21, 0), false),
-            new ChartSlot("9PM", LocalTime.of(21, 0), LocalTime.of(23, 59), false)
-    );
 
     private final CleaningTaskRepository cleaningTaskRepository;
     private final StaffProfileRepository staffProfileRepository;
@@ -116,14 +105,7 @@ public class AdminDashboardService {
                 ),
                 new AdminDashboardResponse.CapacityWorkload(
                         availableHours,
-                        requiredHours,
-                        buildCapacityWorkloadSeries(onDutyStaff, todaysTasks)
-                ),
-                new AdminDashboardResponse.ResourceDiscrepancy(
-                        requiredHours,
-                        availableHours,
-                        deltaHours,
-                        buildImpactMessage(deltaHours)
+                        requiredHours
                 ),
                 new AdminDashboardResponse.CurrentAdmin(
                         resolveAdminDisplayName(username),
@@ -131,62 +113,6 @@ public class AdminDashboardService {
                         null
                 )
         );
-    }
-
-    private List<AdminDashboardResponse.CapacityWorkloadPoint> buildCapacityWorkloadSeries(
-            List<StaffProfile> onDutyStaff,
-            List<CleaningTask> todaysTasks
-    ) {
-        return CHART_SLOTS.stream()
-                .map(slot -> new AdminDashboardResponse.CapacityWorkloadPoint(
-                        slot.label(),
-                        roundToSingleDecimal(calculateAvailableHoursForSlot(onDutyStaff, slot)),
-                        roundToSingleDecimal(calculateRequiredHoursForSlot(todaysTasks, slot)),
-                        slot.peak()
-                ))
-                .toList();
-    }
-
-    private double calculateAvailableHoursForSlot(List<StaffProfile> onDutyStaff, ChartSlot slot) {
-        return onDutyStaff.stream()
-                .map(StaffProfile::getPreferredShift)
-                .filter(shift -> shift != null)
-                .mapToDouble(shift -> overlapHours(shift.getStartTime(), shift.getEndTime(), slot.startTime(), slot.endTime()))
-                .sum();
-    }
-
-    private double calculateRequiredHoursForSlot(List<CleaningTask> todaysTasks, ChartSlot slot) {
-        double totalHours = 0.0;
-
-        for (CleaningTask task : todaysTasks) {
-            if (task.getTaskStatus() == TaskStatus.CANCELLED) {
-                continue;
-            }
-
-            Shift shift = task.getShift();
-            if (shift == null) {
-                if ("12PM".equals(slot.label())) {
-                    totalHours += task.getEstimatedMinutes() / 60.0;
-                }
-                continue;
-            }
-
-            long overlapMinutes = overlapMinutes(
-                    shift.getStartTime(),
-                    shift.getEndTime(),
-                    slot.startTime(),
-                    slot.endTime()
-            );
-
-            if (overlapMinutes <= 0) {
-                continue;
-            }
-
-            long shiftMinutes = Math.max(ChronoUnit.MINUTES.between(shift.getStartTime(), shift.getEndTime()), 1L);
-            totalHours += (task.getEstimatedMinutes() * (overlapMinutes / (double) shiftMinutes)) / 60.0;
-        }
-
-        return totalHours;
     }
 
     private int activeTaskMinutes(List<CleaningTask> tasks) {
@@ -227,20 +153,11 @@ public class AdminDashboardService {
 
     private String buildShortfallMessage(double deltaHours, int additionalStaffRequired) {
         if (deltaHours <= 0) {
-            return "Current shift capacity is healthy and sufficient for today’s workload.";
+            return "Current shift capacity is healthy and sufficient for today's workload.";
         }
 
         return "Current shift requires %d additional staff members to maintain service standards."
                 .formatted(additionalStaffRequired);
-    }
-
-    private String buildImpactMessage(double deltaHours) {
-        if (deltaHours <= 0) {
-            return "Current roster availability is aligned with today’s cleaning demand.";
-        }
-
-        return "The delta of %.1f hours represents likely delayed room check-ins if not mitigated."
-                .formatted(deltaHours);
     }
 
     private String resolveAdminDisplayName(String username) {
@@ -289,33 +206,5 @@ public class AdminDashboardService {
 
     private double roundToSingleDecimal(double value) {
         return Math.round(value * 10.0) / 10.0;
-    }
-
-    private double overlapHours(
-            LocalTime sourceStart,
-            LocalTime sourceEnd,
-            LocalTime slotStart,
-            LocalTime slotEnd
-    ) {
-        return overlapMinutes(sourceStart, sourceEnd, slotStart, slotEnd) / 60.0;
-    }
-
-    private long overlapMinutes(
-            LocalTime sourceStart,
-            LocalTime sourceEnd,
-            LocalTime slotStart,
-            LocalTime slotEnd
-    ) {
-        LocalTime effectiveStart = sourceStart.isAfter(slotStart) ? sourceStart : slotStart;
-        LocalTime effectiveEnd = sourceEnd.isBefore(slotEnd) ? sourceEnd : slotEnd;
-
-        if (!effectiveEnd.isAfter(effectiveStart)) {
-            return 0L;
-        }
-
-        return ChronoUnit.MINUTES.between(effectiveStart, effectiveEnd);
-    }
-
-    private record ChartSlot(String label, LocalTime startTime, LocalTime endTime, boolean peak) {
     }
 }
