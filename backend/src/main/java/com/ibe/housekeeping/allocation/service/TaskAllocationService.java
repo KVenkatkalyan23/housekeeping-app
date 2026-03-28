@@ -1,5 +1,6 @@
 package com.ibe.housekeeping.allocation.service;
 
+import com.ibe.housekeeping.activitylog.service.ActivityLogService;
 import com.ibe.housekeeping.allocation.dto.AllocationResultSummaryResponse;
 import com.ibe.housekeeping.allocation.dto.RunAllocationResponse;
 import com.ibe.housekeeping.allocation.dto.TaskAssignmentItemResponse;
@@ -52,6 +53,7 @@ public class TaskAllocationService {
     private final LeaveRequestRepository leaveRequestRepository;
     private final CleaningTaskService cleaningTaskService;
     private final TaskDateLockService taskDateLockService;
+    private final ActivityLogService activityLogService;
 
     public TaskAllocationService(
             CleaningTaskRepository cleaningTaskRepository,
@@ -60,7 +62,8 @@ public class TaskAllocationService {
             ShiftRepository shiftRepository,
             LeaveRequestRepository leaveRequestRepository,
             CleaningTaskService cleaningTaskService,
-            TaskDateLockService taskDateLockService
+            TaskDateLockService taskDateLockService,
+            ActivityLogService activityLogService
     ) {
         this.cleaningTaskRepository = cleaningTaskRepository;
         this.staffProfileRepository = staffProfileRepository;
@@ -69,6 +72,7 @@ public class TaskAllocationService {
         this.leaveRequestRepository = leaveRequestRepository;
         this.cleaningTaskService = cleaningTaskService;
         this.taskDateLockService = taskDateLockService;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional
@@ -137,16 +141,24 @@ public class TaskAllocationService {
 
         if (!newAssignments.isEmpty()) {
             taskAssignmentRepository.saveAll(newAssignments);
+            newAssignments.forEach(activityLogService::logTaskAssigned);
         }
 
         List<TaskAssignment> allAssignments = taskAssignmentRepository.findAllByTaskDate(taskDate);
         List<CleaningTask> remainingUnassigned = cleaningTaskRepository.findUnassignedEligibleTasksForResult(taskDate, EXCLUDED_STATUSES);
 
-        return new RunAllocationResponse(
+        RunAllocationResponse response = new RunAllocationResponse(
                 buildSummary(taskDate, allAssignments.size(), remainingUnassigned.size()),
                 allAssignments.stream().map(this::toAssignmentItem).toList(),
                 remainingUnassigned.stream().map(this::toUnassignedItem).toList()
         );
+        activityLogService.logAllocationRun(
+                taskDate,
+                allAssignments.size(),
+                remainingUnassigned.size(),
+                allAssignments.size() + remainingUnassigned.size()
+        );
+        return response;
     }
 
     private List<StaffProfile> getEligibleStaff(LocalDate taskDate) {

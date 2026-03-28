@@ -1,5 +1,6 @@
 package com.ibe.housekeeping.staffworkboard.service;
 
+import com.ibe.housekeeping.activitylog.service.ActivityLogService;
 import com.ibe.housekeeping.allocation.repository.TaskAssignmentRepository;
 import com.ibe.housekeeping.auth.repository.UserRepository;
 import com.ibe.housekeeping.common.enums.AvailabilityStatus;
@@ -29,15 +30,18 @@ public class StaffWorkboardService {
     private final TaskAssignmentRepository taskAssignmentRepository;
     private final StaffProfileRepository staffProfileRepository;
     private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
 
     public StaffWorkboardService(
             TaskAssignmentRepository taskAssignmentRepository,
             StaffProfileRepository staffProfileRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            ActivityLogService activityLogService
     ) {
         this.taskAssignmentRepository = taskAssignmentRepository;
         this.staffProfileRepository = staffProfileRepository;
         this.userRepository = userRepository;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional(readOnly = true)
@@ -97,7 +101,8 @@ public class StaffWorkboardService {
 
     @Transactional
     public MarkTaskCompleteResponse markTaskComplete(String username, UUID taskId) {
-        StaffProfile staffProfile = loadStaffProfile(username);
+        User user = loadUser(username);
+        StaffProfile staffProfile = loadStaffProfile(user);
 
         if (staffProfile.getAvailabilityStatus() != AvailabilityStatus.ON_DUTY) {
             throw new ResponseStatusException(
@@ -132,6 +137,7 @@ public class StaffWorkboardService {
         LocalDateTime completedAt = LocalDateTime.now();
         task.setTaskStatus(TaskStatus.COMPLETED);
         task.setCompletedAt(completedAt);
+        activityLogService.logTaskCompleted(task, staffProfile, user);
 
         return new MarkTaskCompleteResponse(
                 task.getId(),
@@ -142,9 +148,15 @@ public class StaffWorkboardService {
     }
 
     private StaffProfile loadStaffProfile(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required"));
+        return loadStaffProfile(loadUser(username));
+    }
 
+    private User loadUser(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required"));
+    }
+
+    private StaffProfile loadStaffProfile(User user) {
         return staffProfileRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,

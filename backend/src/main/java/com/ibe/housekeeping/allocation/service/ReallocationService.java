@@ -1,5 +1,6 @@
 package com.ibe.housekeeping.allocation.service;
 
+import com.ibe.housekeeping.activitylog.service.ActivityLogService;
 import com.ibe.housekeeping.allocation.dto.AllocationResultSummaryResponse;
 import com.ibe.housekeeping.allocation.dto.RunAllocationResponse;
 import com.ibe.housekeeping.allocation.dto.TaskAssignmentItemResponse;
@@ -30,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +54,7 @@ public class ReallocationService {
     private final AttendanceRepository attendanceRepository;
     private final TaskDateLockService taskDateLockService;
     private final Clock clock;
+    private final ActivityLogService activityLogService;
 
     public ReallocationService(
             CleaningTaskRepository cleaningTaskRepository,
@@ -60,7 +64,8 @@ public class ReallocationService {
             LeaveRequestRepository leaveRequestRepository,
             AttendanceRepository attendanceRepository,
             TaskDateLockService taskDateLockService,
-            Clock clock
+            Clock clock,
+            ActivityLogService activityLogService
     ) {
         this.cleaningTaskRepository = cleaningTaskRepository;
         this.staffProfileRepository = staffProfileRepository;
@@ -70,6 +75,7 @@ public class ReallocationService {
         this.attendanceRepository = attendanceRepository;
         this.taskDateLockService = taskDateLockService;
         this.clock = clock;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional
@@ -77,12 +83,12 @@ public class ReallocationService {
         LocalDate today = LocalDate.now(clock);
 
         return taskDateLockService.executeWithTaskDateLock(today, () -> {
-            detachUnfinishedAssignments(today, staffId);
-            return runReallocation(today);
+            List<TaskAssignment> detachedAssignments = detachUnfinishedAssignments(today, staffId);
+            return runReallocation(today, detachedAssignments);
         });
     }
 
-    private RunAllocationResponse runReallocation(LocalDate taskDate) {
+    private RunAllocationResponse runReallocation(LocalDate taskDate, List<TaskAssignment> detachedAssignments) {
         List<CleaningTask> unassignedTasks = cleaningTaskRepository.findUnassignedEligibleTasksForAllocation(taskDate, EXCLUDED_STATUSES);
         ShiftAllocationConfig shiftConfig = getAllocationShiftConfig();
         List<TaskAssignment> existingAssignments = taskAssignmentRepository.findAllByTaskDate(taskDate);
@@ -113,6 +119,23 @@ public class ReallocationService {
 
         if (!newAssignments.isEmpty()) {
             taskAssignmentRepository.saveAll(newAssignments);
+            Map<UUID, TaskAssignment> detachedAssignmentsByTaskId = detachedAssignments.stream()
+                    .collect(Collectors.toMap(
+                            assignment -> assignment.getCleaningTask().getId(),
+                            Function.identity(),
+                            (left, right) -> left
+                    ));
+            for (TaskAssignment newAssignment : newAssignments) {
+                TaskAssignment detachedAssignment = detachedAssignmentsByTaskId.get(newAssignment.getCleaningTask().getId());
+                if (detachedAssignment != null && detachedAssignment.getStaff() != null && newAssignment.getStaff() != null) {
+                    activityLogService.logTaskRelocated(
+                            newAssignment.getCleaningTask(),
+                            detachedAssignment.getStaff(),
+                            newAssignment.getStaff(),
+                            "Clock out reallocation"
+                    );
+                }
+            }
         }
 
         List<TaskAssignment> allAssignments = taskAssignmentRepository.findAllByTaskDate(taskDate);
@@ -125,7 +148,7 @@ public class ReallocationService {
         );
     }
 
-    private void detachUnfinishedAssignments(LocalDate taskDate, UUID staffId) {
+    private List<TaskAssignment> detachUnfinishedAssignments(LocalDate taskDate, UUID staffId) {
         List<TaskAssignment> assignments = taskAssignmentRepository.findAllByStaffIdAndTaskDateAndTaskStatuses(
                 staffId,
                 taskDate,
@@ -133,7 +156,7 @@ public class ReallocationService {
         );
 
         if (assignments.isEmpty()) {
-            return;
+            return List.of();
         }
 
         for (TaskAssignment assignment : assignments) {
@@ -142,6 +165,7 @@ public class ReallocationService {
 
         taskAssignmentRepository.deleteAll(assignments);
         taskAssignmentRepository.flush();
+        return assignments;
     }
 
     private List<StaffProfile> getEligibleStaff(LocalDate taskDate) {

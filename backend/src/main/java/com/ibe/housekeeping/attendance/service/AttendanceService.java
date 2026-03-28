@@ -1,5 +1,6 @@
 package com.ibe.housekeeping.attendance.service;
 
+import com.ibe.housekeeping.activitylog.service.ActivityLogService;
 import com.ibe.housekeeping.attendance.dto.AttendanceStatusResponse;
 import com.ibe.housekeeping.attendance.dto.ClockInResponse;
 import com.ibe.housekeeping.attendance.dto.ClockOutResponse;
@@ -28,17 +29,20 @@ public class AttendanceService {
     private final StaffProfileRepository staffProfileRepository;
     private final UserRepository userRepository;
     private final ReallocationService reallocationService;
+    private final ActivityLogService activityLogService;
 
     public AttendanceService(
             AttendanceRepository attendanceRepository,
             StaffProfileRepository staffProfileRepository,
             UserRepository userRepository,
-            ReallocationService reallocationService
+            ReallocationService reallocationService,
+            ActivityLogService activityLogService
     ) {
         this.attendanceRepository = attendanceRepository;
         this.staffProfileRepository = staffProfileRepository;
         this.userRepository = userRepository;
         this.reallocationService = reallocationService;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional(readOnly = true)
@@ -50,7 +54,8 @@ public class AttendanceService {
 
     @Transactional
     public ClockInResponse clockIn(String username) {
-        StaffProfile staffProfile = loadStaffProfile(username);
+        User user = loadUser(username);
+        StaffProfile staffProfile = loadStaffProfile(user);
         Shift shift = requirePreferredShift(staffProfile);
 
         Attendance activeAttendance = loadSingleActiveAttendance(staffProfile, true);
@@ -73,6 +78,7 @@ public class AttendanceService {
         Attendance savedAttendance = attendanceRepository.save(attendance);
         staffProfile.setAvailabilityStatus(AvailabilityStatus.ON_DUTY);
         staffProfileRepository.save(staffProfile);
+        activityLogService.logClockIn(savedAttendance, staffProfile, user);
 
         return new ClockInResponse(
                 savedAttendance.getId(),
@@ -87,7 +93,8 @@ public class AttendanceService {
 
     @Transactional
     public ClockOutResponse clockOut(String username) {
-        StaffProfile staffProfile = loadStaffProfile(username);
+        User user = loadUser(username);
+        StaffProfile staffProfile = loadStaffProfile(user);
         Attendance activeAttendance = loadSingleActiveAttendance(staffProfile, true);
 
         if (activeAttendance == null) {
@@ -107,6 +114,7 @@ public class AttendanceService {
 
         staffProfile.setAvailabilityStatus(AvailabilityStatus.OFF_DUTY);
         staffProfileRepository.save(staffProfile);
+        activityLogService.logClockOut(savedAttendance, staffProfile, user);
         reallocationService.reallocateTodayForStaff(staffProfile.getId());
 
         return new ClockOutResponse(
@@ -122,9 +130,15 @@ public class AttendanceService {
     }
 
     private StaffProfile loadStaffProfile(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required"));
+        return loadStaffProfile(loadUser(username));
+    }
 
+    private User loadUser(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required"));
+    }
+
+    private StaffProfile loadStaffProfile(User user) {
         return staffProfileRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Staff profile not found for this user."));
     }

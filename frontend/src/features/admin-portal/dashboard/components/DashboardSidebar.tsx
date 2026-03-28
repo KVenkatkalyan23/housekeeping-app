@@ -98,7 +98,7 @@ const navigationItems: NavigationItem[] = [
   { label: 'Rooms', icon: RoomsIcon },
   { label: 'Tasks', path: '/admin/tasks', icon: TasksIcon },
   { label: 'Attendance', icon: AttendanceIcon },
-  { label: 'Logs', icon: LogsIcon },
+  { label: 'Logs', path: '/admin/logs', icon: LogsIcon },
   { label: 'Leave', icon: LeaveIcon },
 ]
 
