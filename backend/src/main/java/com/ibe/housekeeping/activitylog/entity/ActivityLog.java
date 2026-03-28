@@ -1,4 +1,4 @@
-package com.ibe.housekeeping.entity;
+package com.ibe.housekeeping.activitylog.entity;
 
 import com.ibe.housekeeping.common.enums.ActorType;
 import com.ibe.housekeeping.common.enums.EventCategory;
@@ -31,7 +31,8 @@ import org.hibernate.type.SqlTypes;
         name = "activity_logs",
         indexes = {
                 @Index(name = "idx_activity_logs_created_at", columnList = "created_at DESC"),
-                @Index(name = "idx_activity_logs_entity", columnList = "target_entity_type, target_entity_id")
+                @Index(name = "idx_activity_logs_entity", columnList = "target_entity_type, target_entity_id"),
+                @Index(name = "idx_activity_logs_category_created_at", columnList = "event_category, created_at DESC")
         }
 )
 @Getter
