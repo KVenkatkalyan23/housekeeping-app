@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
+import { AdminAuditLogsPage } from "../../features/admin-portal/audit-logs/pages/AdminAuditLogsPage";
 import { AdminDashboardPage } from "../../features/admin-portal/dashboard/pages/AdminDashboardPage";
 import { AdminStaffDirectoryPage } from "../../features/admin-portal/staff-directory/pages/AdminStaffDirectoryPage";
 import { AdminTaskAllocationPage } from "../../features/admin-portal/task-allocation/pages/AdminTaskAllocationPage";
@@ -41,6 +42,10 @@ export const router = createBrowserRouter([
       {
         path: "dashboard",
         element: <AdminDashboardPage />,
+      },
+      {
+        path: "logs",
+        element: <AdminAuditLogsPage />,
       },
       {
         path: "staff",

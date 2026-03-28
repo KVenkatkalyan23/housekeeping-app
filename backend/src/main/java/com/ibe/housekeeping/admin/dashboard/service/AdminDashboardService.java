@@ -1,5 +1,6 @@
 package com.ibe.housekeeping.admin.dashboard.service;
 
+import com.ibe.housekeeping.activitylog.service.ActivityLogService;
 import com.ibe.housekeeping.admin.dashboard.dto.AdminDashboardResponse;
 import com.ibe.housekeeping.auth.repository.UserRepository;
 import com.ibe.housekeeping.common.enums.AvailabilityStatus;
@@ -26,6 +27,7 @@ public class AdminDashboardService {
     private final RoomStayRepository roomStayRepository;
     private final UserRepository userRepository;
     private final Clock clock;
+    private final ActivityLogService activityLogService;
 
     public AdminDashboardService(
             CleaningTaskRepository cleaningTaskRepository,
@@ -33,7 +35,8 @@ public class AdminDashboardService {
             RoomRepository roomRepository,
             RoomStayRepository roomStayRepository,
             UserRepository userRepository,
-            Clock clock
+            Clock clock,
+            ActivityLogService activityLogService
     ) {
         this.cleaningTaskRepository = cleaningTaskRepository;
         this.staffProfileRepository = staffProfileRepository;
@@ -41,6 +44,7 @@ public class AdminDashboardService {
         this.roomStayRepository = roomStayRepository;
         this.userRepository = userRepository;
         this.clock = clock;
+        this.activityLogService = activityLogService;
     }
 
     public AdminDashboardResponse getDashboard(String username) {
@@ -76,6 +80,22 @@ public class AdminDashboardService {
                 ? (int) Math.ceil((deltaHours * 60.0) / Math.max(averageShiftMinutes, 1))
                 : 0;
         int shortfallPercent = deltaHours > 0 ? percentage(deltaHours, requiredHours) : 0;
+
+        if (deltaHours > 0 && !activityLogService.hasEventCodeForToday("SHORTFALL_DETECTED")) {
+            Shift referenceShift = onDutyStaff.stream()
+                    .map(StaffProfile::getPreferredShift)
+                    .filter(shift -> shift != null)
+                    .findFirst()
+                    .orElse(null);
+            activityLogService.logShortfallDetected(
+                    referenceShift,
+                    requiredHours,
+                    availableHours,
+                    deltaHours,
+                    additionalStaffRequired,
+                    today
+            );
+        }
 
         return new AdminDashboardResponse(
                 new AdminDashboardResponse.ShortfallAlert(

@@ -5,6 +5,14 @@ import { baseQueryWithAuth } from './client'
 export const baseApi = createApi({
   reducerPath: 'baseApi',
   baseQuery: baseQueryWithAuth,
-  tagTypes: ['Attendance', 'StaffWorkboard', 'Leave', 'AdminDashboard', 'AdminStaffDirectory', 'AdminTaskAllocation'],
+  tagTypes: [
+    'Attendance',
+    'StaffWorkboard',
+    'Leave',
+    'AdminDashboard',
+    'AdminStaffDirectory',
+    'AdminTaskAllocation',
+    'AdminAuditLogs',
+  ],
   endpoints: () => ({}),
 })
