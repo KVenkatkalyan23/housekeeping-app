@@ -96,7 +96,7 @@ const navigationItems: NavigationItem[] = [
   { label: 'Dashboard', path: '/admin/dashboard', icon: DashboardIcon },
   { label: 'Staff', path: '/admin/staff', icon: StaffIcon },
   { label: 'Rooms', icon: RoomsIcon },
-  { label: 'Tasks', icon: TasksIcon },
+  { label: 'Tasks', path: '/admin/tasks', icon: TasksIcon },
   { label: 'Attendance', icon: AttendanceIcon },
   { label: 'Logs', icon: LogsIcon },
   { label: 'Leave', icon: LeaveIcon },
