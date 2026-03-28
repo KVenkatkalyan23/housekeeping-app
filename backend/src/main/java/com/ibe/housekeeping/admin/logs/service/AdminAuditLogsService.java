@@ -2,7 +2,7 @@ package com.ibe.housekeeping.admin.logs.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ibe.housekeeping.activitylog.entity.ActivityLog;
+import com.ibe.housekeeping.entity.ActivityLog;
 import com.ibe.housekeeping.activitylog.repository.ActivityLogRepository;
 import com.ibe.housekeeping.admin.logs.dto.AdminAuditLogItemResponse;
 import com.ibe.housekeeping.admin.logs.dto.AdminAuditLogsResponse;

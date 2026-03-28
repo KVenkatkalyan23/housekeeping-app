@@ -2,7 +2,7 @@ package com.ibe.housekeeping.admin.logs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ibe.housekeeping.activitylog.entity.ActivityLog;
+import com.ibe.housekeeping.entity.ActivityLog;
 import com.ibe.housekeeping.activitylog.repository.ActivityLogRepository;
 import com.ibe.housekeeping.auth.dto.LoginRequest;
 import com.ibe.housekeeping.auth.repository.UserRepository;

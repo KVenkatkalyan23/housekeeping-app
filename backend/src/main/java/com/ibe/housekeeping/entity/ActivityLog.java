@@ -1,4 +1,4 @@
-package com.ibe.housekeeping.activitylog.entity;
+package com.ibe.housekeeping.entity;
 
 import com.ibe.housekeeping.common.enums.ActorType;
 import com.ibe.housekeeping.common.enums.EventCategory;
