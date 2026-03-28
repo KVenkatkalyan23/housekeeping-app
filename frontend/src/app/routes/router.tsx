@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { AdminDashboardPage } from "../../features/admin-portal/dashboard/pages/AdminDashboardPage";
 import { AdminStaffDirectoryPage } from "../../features/admin-portal/staff-directory/pages/AdminStaffDirectoryPage";
+import { AdminTaskAllocationPage } from "../../features/admin-portal/task-allocation/pages/AdminTaskAllocationPage";
 import { ProtectedRoute } from "../../features/auth/components/ProtectedRoute";
 import { LoginPage } from "../../features/auth/pages/LoginPage";
 import { AttendanceHistoryPage } from "../../features/staff-portal/attendance/pages/AttendanceHistoryPage";
@@ -44,6 +45,10 @@ export const router = createBrowserRouter([
       {
         path: "staff",
         element: <AdminStaffDirectoryPage />,
+      },
+      {
+        path: "tasks",
+        element: <AdminTaskAllocationPage />,
       },
     ],
   },
