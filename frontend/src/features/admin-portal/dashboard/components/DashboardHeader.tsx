@@ -2,7 +2,9 @@ import type { AdminDashboardCurrentAdmin } from '../types'
 
 interface DashboardHeaderProps {
   currentAdmin: AdminDashboardCurrentAdmin
-  lastUpdatedAt: string | null
+  title?: string | null
+  subtitle?: string | null
+  lastUpdatedAt?: string | null
 }
 
 function BellIcon() {
@@ -44,18 +46,26 @@ function formatUpdatedLabel(lastUpdatedAt: string | null) {
 
 export function DashboardHeader({
   currentAdmin,
-  lastUpdatedAt,
+  title = 'Admin Dashboard',
+  subtitle,
+  lastUpdatedAt = null,
 }: DashboardHeaderProps) {
   return (
     <header className="flex flex-col gap-4 border-b border-[#edf1f5] px-6 py-5 md:flex-row md:items-center md:justify-end">
-      <div className="mr-auto">
-        <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[#243648]">
-          Admin Dashboard
-        </h1>
-        <p className="mt-1 text-sm text-[#7a8797]">
-          {formatUpdatedLabel(lastUpdatedAt)}
-        </p>
-      </div>
+      {title || subtitle || lastUpdatedAt ? (
+        <div className="mr-auto">
+          {title ? (
+            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[#243648]">
+              {title}
+            </h1>
+          ) : null}
+          <p className="mt-1 text-sm text-[#7a8797]">
+            {subtitle ?? formatUpdatedLabel(lastUpdatedAt)}
+          </p>
+        </div>
+      ) : (
+        <div className="mr-auto" />
+      )}
 
       <button
         type="button"
