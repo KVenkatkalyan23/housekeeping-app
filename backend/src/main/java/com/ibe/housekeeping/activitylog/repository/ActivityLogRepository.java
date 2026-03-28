@@ -1,6 +1,6 @@
 package com.ibe.housekeeping.activitylog.repository;
 
-import com.ibe.housekeeping.activitylog.entity.ActivityLog;
+import com.ibe.housekeeping.entity.ActivityLog;
 import com.ibe.housekeeping.common.enums.EventCategory;
 import com.ibe.housekeeping.common.enums.Severity;
 import java.time.OffsetDateTime;

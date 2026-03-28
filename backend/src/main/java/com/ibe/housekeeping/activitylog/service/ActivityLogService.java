@@ -3,7 +3,7 @@ package com.ibe.housekeeping.activitylog.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibe.housekeeping.activitylog.dto.CreateActivityLogRequest;
-import com.ibe.housekeeping.activitylog.entity.ActivityLog;
+import com.ibe.housekeeping.entity.ActivityLog;
 import com.ibe.housekeeping.activitylog.repository.ActivityLogRepository;
 import com.ibe.housekeeping.common.enums.ActorType;
 import com.ibe.housekeeping.common.enums.EventCategory;
