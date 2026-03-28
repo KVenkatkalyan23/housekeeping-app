@@ -13,6 +13,7 @@ export const baseApi = createApi({
     'AdminStaffDirectory',
     'AdminTaskAllocation',
     'AdminAuditLogs',
+    'AdminAttendance',
   ],
   endpoints: () => ({}),
 })
