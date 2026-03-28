@@ -1,26 +1,26 @@
-import type { WeeklyAttendanceSummaryResponse } from '../types'
+import type { WeeklyAttendanceSummaryResponse } from "../types";
 
 function formatDecimalHours(minutes: number) {
-  return (minutes / 60).toFixed(1)
+  return (minutes / 60).toFixed(1);
 }
 
 function formatDuration(minutes: number) {
-  const hours = Math.floor(minutes / 60)
-  const remainingMinutes = minutes % 60
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
 
   if (hours === 0) {
-    return `${remainingMinutes}m`
+    return `${remainingMinutes}m`;
   }
 
   if (remainingMinutes === 0) {
-    return `${hours}h`
+    return `${hours}h`;
   }
 
-  return `${hours}h ${remainingMinutes}m`
+  return `${hours}h ${remainingMinutes}m`;
 }
 
 interface WeeklyOverviewCardsProps {
-  summary: WeeklyAttendanceSummaryResponse
+  summary: WeeklyAttendanceSummaryResponse;
 }
 
 export function WeeklyOverviewCards({ summary }: WeeklyOverviewCardsProps) {
@@ -41,7 +41,13 @@ export function WeeklyOverviewCards({ summary }: WeeklyOverviewCardsProps) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-              <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" />
+              <circle
+                cx="12"
+                cy="12"
+                r="8"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
             </svg>
           </div>
           <p className="mt-8 text-[2rem] font-semibold tracking-[-0.05em] text-[#23324d]">
@@ -72,5 +78,5 @@ export function WeeklyOverviewCards({ summary }: WeeklyOverviewCardsProps) {
         </div>
       </div>
     </section>
-  )
+  );
 }

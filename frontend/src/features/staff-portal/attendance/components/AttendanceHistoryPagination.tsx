@@ -1,9 +1,9 @@
 interface AttendanceHistoryPaginationProps {
-  currentPage: number
-  hasPrevious: boolean
-  hasNext: boolean
-  onPrevious: () => void
-  onNext: () => void
+  currentPage: number;
+  hasPrevious: boolean;
+  hasNext: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
 }
 
 export function AttendanceHistoryPagination({
@@ -35,5 +35,5 @@ export function AttendanceHistoryPagination({
         Older Week
       </button>
     </div>
-  )
+  );
 }

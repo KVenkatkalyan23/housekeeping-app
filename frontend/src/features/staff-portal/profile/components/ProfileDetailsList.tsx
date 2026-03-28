@@ -1,8 +1,8 @@
-import type { StaffProfileResponse } from '../types'
-import { ProfileDetailCard } from './ProfileDetailCard'
+import type { StaffProfileResponse } from "../types";
+import { ProfileDetailCard } from "./ProfileDetailCard";
 
 interface ProfileDetailsListProps {
-  profile: StaffProfileResponse
+  profile: StaffProfileResponse;
 }
 
 export function ProfileDetailsList({ profile }: ProfileDetailsListProps) {
@@ -14,20 +14,15 @@ export function ProfileDetailsList({ profile }: ProfileDetailsListProps) {
       <div className="mt-5 space-y-3.5 rounded-[1.8rem] bg-[#f7f8fb] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
         <ProfileDetailCard
           label="Work Email"
-          value={profile.email || 'Not available'}
+          value={profile.email || "Not available"}
           icon="email"
         />
         <ProfileDetailCard
           label="Phone"
-          value={profile.phone || 'Not available'}
+          value={profile.phone || "Not available"}
           icon="phone"
-        />
-        <ProfileDetailCard
-          label="Assigned Wing"
-          value={profile.assignedWing}
-          icon="location"
         />
       </div>
     </section>
-  )
+  );
 }

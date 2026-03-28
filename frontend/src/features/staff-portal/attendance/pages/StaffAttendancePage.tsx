@@ -51,7 +51,7 @@ function PortalHeader({
     <header className="flex items-start justify-between gap-4">
       <div>
         <p className="text-[0.68rem] font-bold uppercase tracking-[0.2em] text-[#7aa4e6]">
-          Housekeeping AI
+          Housekeeping
         </p>
         <h1 className="text-[2rem] font-semibold tracking-[-0.05em] text-slate-900">
           Staff Portal
@@ -63,27 +63,6 @@ function PortalHeader({
       </div>
 
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 shadow-[0_12px_25px_rgba(15,23,42,0.08)]"
-          aria-label="Notifications"
-        >
-          <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-            <path
-              d="M12 5a4 4 0 0 0-4 4v2.2c0 .7-.24 1.37-.67 1.92L6 14.8h12l-1.33-1.68a3.1 3.1 0 0 1-.67-1.92V9a4 4 0 0 0-4-4Z"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M10 18a2 2 0 0 0 4 0"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#e7f0ff] text-sm font-semibold text-[#1664c0] shadow-[0_12px_25px_rgba(15,23,42,0.08)]">
           {(username ?? "S").slice(0, 1).toUpperCase()}
         </div>
@@ -117,7 +96,9 @@ function AttendanceErrorCard({
 }) {
   return (
     <section className="rounded-[1.75rem] bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
-      <h2 className="text-lg font-semibold text-slate-900">Unable to load attendance</h2>
+      <h2 className="text-lg font-semibold text-slate-900">
+        Unable to load attendance
+      </h2>
       <p className="mt-2 text-sm leading-6 text-slate-500">
         {resolveErrorMessage(error)}
       </p>
