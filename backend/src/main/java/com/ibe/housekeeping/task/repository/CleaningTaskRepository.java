@@ -53,5 +53,14 @@ public interface CleaningTaskRepository extends JpaRepository<CleaningTask, UUID
             @Param("excludedStatuses") Collection<TaskStatus> excludedStatuses
     );
 
+    @Query("""
+            select task
+            from CleaningTask task
+            left join fetch task.shift shift
+            where task.taskDate = :taskDate
+            order by task.priorityOrder asc, task.id asc
+            """)
+    List<CleaningTask> findDashboardTasksByTaskDate(@Param("taskDate") LocalDate taskDate);
+
     void deleteAllByRoomIdIn(Collection<UUID> roomIds);
 }

@@ -1,10 +1,10 @@
 import { useSelector } from "react-redux";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
+import { AdminDashboardPage } from "../../features/admin-portal/dashboard/pages/AdminDashboardPage";
 import { ProtectedRoute } from "../../features/auth/components/ProtectedRoute";
 import { LoginPage } from "../../features/auth/pages/LoginPage";
 import { getDefaultRouteForRole } from "../../features/auth/routing";
-import { HomePage } from "../../features/dashboard/pages/HomePage";
 import { AttendanceHistoryPage } from "../../features/staff-portal/attendance/pages/AttendanceHistoryPage";
 import { StaffAttendancePage } from "../../features/staff-portal/attendance/pages/StaffAttendancePage";
 import { LeaveHistoryPage } from "../../features/staff-portal/leave/pages/LeaveHistoryPage";
@@ -41,7 +41,11 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <HomePage />,
+        element: <Navigate to="/admin/dashboard" replace />,
+      },
+      {
+        path: "dashboard",
+        element: <AdminDashboardPage />,
       },
     ],
   },
