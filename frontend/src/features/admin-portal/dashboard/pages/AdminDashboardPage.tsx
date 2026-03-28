@@ -144,6 +144,7 @@ export function AdminDashboardPage() {
                   avatarUrl: null,
                 }
               }
+              title="Admin Dashboard"
               lastUpdatedAt={lastUpdatedAt}
             />
 

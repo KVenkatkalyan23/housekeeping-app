@@ -1,21 +1,15 @@
-import { useSelector } from "react-redux";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { AdminDashboardPage } from "../../features/admin-portal/dashboard/pages/AdminDashboardPage";
+import { AdminStaffDirectoryPage } from "../../features/admin-portal/staff-directory/pages/AdminStaffDirectoryPage";
 import { ProtectedRoute } from "../../features/auth/components/ProtectedRoute";
 import { LoginPage } from "../../features/auth/pages/LoginPage";
-import { getDefaultRouteForRole } from "../../features/auth/routing";
 import { AttendanceHistoryPage } from "../../features/staff-portal/attendance/pages/AttendanceHistoryPage";
 import { StaffAttendancePage } from "../../features/staff-portal/attendance/pages/StaffAttendancePage";
 import { LeaveHistoryPage } from "../../features/staff-portal/leave/pages/LeaveHistoryPage";
 import { ProfilePage } from "../../features/staff-portal/profile/pages/ProfilePage";
-import type { RootState } from "../store";
 import { ErrorPage } from "./ErrorPage";
-
-function RoleHomeRedirect() {
-  const role = useSelector((state: RootState) => state.auth.role);
-  return <Navigate to={getDefaultRouteForRole(role)} replace />;
-}
+import { RoleHomeRedirect } from "./RoleHomeRedirect";
 
 export const router = createBrowserRouter([
   {
@@ -46,6 +40,10 @@ export const router = createBrowserRouter([
       {
         path: "dashboard",
         element: <AdminDashboardPage />,
+      },
+      {
+        path: "staff",
+        element: <AdminStaffDirectoryPage />,
       },
     ],
   },

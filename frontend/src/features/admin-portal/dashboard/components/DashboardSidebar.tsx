@@ -94,8 +94,8 @@ function LogoutIcon(className = 'h-4 w-4') {
 
 const navigationItems: NavigationItem[] = [
   { label: 'Dashboard', path: '/admin/dashboard', icon: DashboardIcon },
+  { label: 'Staff', path: '/admin/staff', icon: StaffIcon },
   { label: 'Rooms', icon: RoomsIcon },
-  { label: 'Staff', icon: StaffIcon },
   { label: 'Tasks', icon: TasksIcon },
   { label: 'Attendance', icon: AttendanceIcon },
   { label: 'Logs', icon: LogsIcon },
