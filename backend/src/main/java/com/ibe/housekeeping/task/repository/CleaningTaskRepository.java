@@ -56,6 +56,16 @@ public interface CleaningTaskRepository extends JpaRepository<CleaningTask, UUID
     @Query("""
             select task
             from CleaningTask task
+            join fetch task.room room
+            left join fetch task.shift shift
+            where task.taskDate = :taskDate
+            order by task.priorityOrder asc, room.roomNumber asc, task.id asc
+            """)
+    List<CleaningTask> findAllForAdminAllocationByTaskDate(@Param("taskDate") LocalDate taskDate);
+
+    @Query("""
+            select task
+            from CleaningTask task
             left join fetch task.shift shift
             where task.taskDate = :taskDate
             order by task.priorityOrder asc, task.id asc
