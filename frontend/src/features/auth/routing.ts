@@ -5,5 +5,5 @@ export function getDefaultRouteForRole(role: Role | null) {
     return '/staff/attendance'
   }
 
-  return '/admin'
+  return '/admin/dashboard'
 }

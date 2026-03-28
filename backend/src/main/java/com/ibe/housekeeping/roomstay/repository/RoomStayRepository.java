@@ -15,5 +15,7 @@ public interface RoomStayRepository extends JpaRepository<RoomStay, UUID> {
             LocalDate checkOutDate
     );
 
+    long countByCheckInDateLessThanEqualAndCheckOutDateGreaterThanEqual(LocalDate checkInDate, LocalDate checkOutDate);
+
     void deleteAllByRoomIdIn(Collection<UUID> roomIds);
 }
