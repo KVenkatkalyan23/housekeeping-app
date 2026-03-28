@@ -29,4 +29,28 @@ public interface StaffProfileRepository extends JpaRepository<StaffProfile, UUID
     List<StaffProfile> findAllByAvailabilityStatusWithPreferredShift(
             @Param("availabilityStatus") AvailabilityStatus availabilityStatus
     );
+
+    @Query("""
+            select staff
+            from StaffProfile staff
+            join fetch staff.user user
+            left join fetch staff.preferredShift preferredShift
+            where user.role = com.ibe.housekeeping.common.enums.Role.STAFF
+            order by staff.fullName asc, staff.id asc
+            """)
+    List<StaffProfile> findAllForAdminDirectory();
+
+    @Query("""
+            select staff
+            from StaffProfile staff
+            join fetch staff.user user
+            left join fetch staff.preferredShift preferredShift
+            where user.role = com.ibe.housekeeping.common.enums.Role.STAFF
+              and (
+                  lower(staff.fullName) like lower(concat('%', :search, '%'))
+                  or lower(user.username) like lower(concat('%', :search, '%'))
+              )
+            order by staff.fullName asc, staff.id asc
+            """)
+    List<StaffProfile> searchAllForAdminDirectory(@Param("search") String search);
 }
