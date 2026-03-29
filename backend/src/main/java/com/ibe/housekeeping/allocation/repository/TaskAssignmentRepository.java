@@ -111,4 +111,79 @@ public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, 
             @Param("taskId") UUID taskId,
             @Param("staffId") UUID staffId
     );
+
+    @Query("""
+            select assignment
+            from TaskAssignment assignment
+            join fetch assignment.cleaningTask task
+            join fetch task.room room
+            left join fetch task.shift shift
+            left join fetch assignment.staff staff
+            left join fetch staff.user user
+            left join fetch staff.preferredShift preferredShift
+            where task.id = :taskId
+            """)
+    Optional<TaskAssignment> findByCleaningTaskIdForReassignment(@Param("taskId") UUID taskId);
+
+    @Query("""
+            select coalesce(sum(task.estimatedMinutes), 0)
+            from TaskAssignment assignment
+            join assignment.cleaningTask task
+            where assignment.staff.id = :staffId
+              and task.taskDate = :taskDate
+              and task.shift.id = :shiftId
+              and task.taskStatus not in :excludedStatuses
+              and task.id <> :excludedTaskId
+            """)
+    Optional<Integer> sumAssignedMinutesForStaffAndShift(
+            @Param("staffId") UUID staffId,
+            @Param("taskDate") LocalDate taskDate,
+            @Param("shiftId") UUID shiftId,
+            @Param("excludedTaskId") UUID excludedTaskId,
+            @Param("excludedStatuses") Collection<TaskStatus> excludedStatuses
+    );
+
+    @Query("""
+            select coalesce(sum(task.estimatedMinutes), 0)
+            from TaskAssignment assignment
+            join assignment.cleaningTask task
+            where assignment.staff.id = :staffId
+              and task.taskDate = :taskDate
+              and task.taskStatus not in :excludedStatuses
+              and task.id <> :excludedTaskId
+            """)
+    Optional<Integer> sumAssignedMinutesForStaffOnDate(
+            @Param("staffId") UUID staffId,
+            @Param("taskDate") LocalDate taskDate,
+            @Param("excludedTaskId") UUID excludedTaskId,
+            @Param("excludedStatuses") Collection<TaskStatus> excludedStatuses
+    );
+
+    default Optional<Integer> sumAssignedMinutesForStaffAndShift(
+            UUID staffId,
+            LocalDate taskDate,
+            UUID shiftId,
+            UUID excludedTaskId
+    ) {
+        return sumAssignedMinutesForStaffAndShift(
+                staffId,
+                taskDate,
+                shiftId,
+                excludedTaskId,
+                List.of(TaskStatus.COMPLETED, TaskStatus.CANCELLED)
+        );
+    }
+
+    default Optional<Integer> sumAssignedMinutesForStaffOnDate(
+            UUID staffId,
+            LocalDate taskDate,
+            UUID excludedTaskId
+    ) {
+        return sumAssignedMinutesForStaffOnDate(
+                staffId,
+                taskDate,
+                excludedTaskId,
+                List.of(TaskStatus.COMPLETED, TaskStatus.CANCELLED)
+        );
+    }
 }

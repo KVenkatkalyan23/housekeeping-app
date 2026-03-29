@@ -6,6 +6,7 @@ import com.ibe.housekeeping.allocation.dto.RunAllocationResponse;
 import com.ibe.housekeeping.allocation.dto.TaskAssignmentItemResponse;
 import com.ibe.housekeeping.allocation.dto.UnassignedTaskItemResponse;
 import com.ibe.housekeeping.allocation.repository.TaskAssignmentRepository;
+import com.ibe.housekeeping.common.enums.AssignmentSource;
 import com.ibe.housekeeping.common.enums.LeaveStatus;
 import com.ibe.housekeeping.common.enums.TaskStatus;
 import com.ibe.housekeeping.common.enums.TaskType;
@@ -228,6 +229,7 @@ public class TaskAllocationService {
             newAssignments.add(TaskAssignment.builder()
                     .cleaningTask(task)
                     .staff(state.staff)
+                    .assignmentSource(AssignmentSource.AUTO)
                     .build());
 
             int estimatedMinutes = safeMinutes(task.getEstimatedMinutes());

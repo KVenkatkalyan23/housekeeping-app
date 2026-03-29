@@ -5,6 +5,7 @@ import com.ibe.housekeeping.entity.CleaningTask;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -71,6 +72,15 @@ public interface CleaningTaskRepository extends JpaRepository<CleaningTask, UUID
             order by task.priorityOrder asc, task.id asc
             """)
     List<CleaningTask> findDashboardTasksByTaskDate(@Param("taskDate") LocalDate taskDate);
+
+    @Query("""
+            select task
+            from CleaningTask task
+            join fetch task.room room
+            left join fetch task.shift shift
+            where task.id = :taskId
+            """)
+    Optional<CleaningTask> findByIdForManualReassignment(@Param("taskId") UUID taskId);
 
     void deleteAllByRoomIdIn(Collection<UUID> roomIds);
 }
