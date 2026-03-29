@@ -1,7 +1,10 @@
 package com.ibe.housekeeping.entity;
 
+import com.ibe.housekeeping.common.enums.AssignmentSource;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -48,6 +51,12 @@ public class TaskAssignment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "staff_id")
     private StaffProfile staff;
+
+    @Builder.Default
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "assignment_source", nullable = false, length = 20)
+    private AssignmentSource assignmentSource = AssignmentSource.AUTO;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

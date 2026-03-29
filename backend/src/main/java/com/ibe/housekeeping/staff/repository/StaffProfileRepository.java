@@ -53,4 +53,34 @@ public interface StaffProfileRepository extends JpaRepository<StaffProfile, UUID
             order by staff.fullName asc, staff.id asc
             """)
     List<StaffProfile> searchAllForAdminDirectory(@Param("search") String search);
+
+    @Query("""
+            select staff
+            from StaffProfile staff
+            join fetch staff.user user
+            left join fetch staff.preferredShift preferredShift
+            where staff.id = :staffId
+            """)
+    Optional<StaffProfile> findByIdForReassignment(@Param("staffId") UUID staffId);
+
+    @Query("""
+            select staff
+            from StaffProfile staff
+            join fetch staff.user user
+            left join fetch staff.preferredShift preferredShift
+            where preferredShift.id = :shiftId
+              and user.role = com.ibe.housekeeping.common.enums.Role.STAFF
+            order by staff.fullName asc, staff.id asc
+            """)
+    List<StaffProfile> findAllByPreferredShiftIdForReassignment(@Param("shiftId") UUID shiftId);
+
+    @Query("""
+            select staff
+            from StaffProfile staff
+            join fetch staff.user user
+            left join fetch staff.preferredShift preferredShift
+            where user.role = com.ibe.housekeeping.common.enums.Role.STAFF
+            order by staff.fullName asc, staff.id asc
+            """)
+    List<StaffProfile> findAllForReassignment();
 }
