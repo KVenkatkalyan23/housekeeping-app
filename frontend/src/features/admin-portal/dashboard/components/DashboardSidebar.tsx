@@ -62,25 +62,6 @@ function LogsIcon(className = 'h-4 w-4') {
   )
 }
 
-function LeaveIcon(className = 'h-4 w-4') {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M7 3h10v3H7V3Zm11 5v13H6V8h12Zm-8 3H8v2h2v-2Zm0 4H8v2h2v-2Zm6-4h-4v6h4v-6Z" fill="currentColor" />
-    </svg>
-  )
-}
-
-function HelpIcon(className = 'h-4 w-4') {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path
-        d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm0 11.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm1.7-3.6-.8.55c-.53.37-.9.8-.9 1.55V14h-2v-.5c0-1.16.55-2.1 1.45-2.73l1.1-.77c.42-.3.65-.73.65-1.2 0-.86-.69-1.55-1.55-1.55-.85 0-1.55.69-1.55 1.55H8a3.55 3.55 0 1 1 7.1 0c0 1.11-.53 2.14-1.4 2.74Z"
-        fill="currentColor"
-      />
-    </svg>
-  )
-}
-
 function LogoutIcon(className = 'h-4 w-4') {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
@@ -97,9 +78,8 @@ const navigationItems: NavigationItem[] = [
   { label: 'Staff', path: '/admin/staff', icon: StaffIcon },
   { label: 'Rooms', icon: RoomsIcon },
   { label: 'Tasks', path: '/admin/tasks', icon: TasksIcon },
-  { label: 'Attendance', icon: AttendanceIcon },
+  { label: 'Attendance', path: '/admin/attendance', icon: AttendanceIcon },
   { label: 'Logs', path: '/admin/logs', icon: LogsIcon },
-  { label: 'Leave', icon: LeaveIcon },
 ]
 
 export function DashboardSidebar({ onLogout }: DashboardSidebarProps) {
@@ -116,13 +96,6 @@ export function DashboardSidebar({ onLogout }: DashboardSidebarProps) {
         </div>
 
         <div className="hidden items-center gap-2 sm:flex xl:hidden">
-          <button
-            type="button"
-            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-[#7a8a9f]"
-          >
-            {HelpIcon()}
-            <span>Help</span>
-          </button>
           <button
             type="button"
             onClick={onLogout}
@@ -166,13 +139,6 @@ export function DashboardSidebar({ onLogout }: DashboardSidebarProps) {
       </nav>
 
       <div className="mt-5 hidden space-y-2 xl:block xl:pt-6">
-        <button
-          type="button"
-          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-[#7a8a9f] hover:bg-white/80"
-        >
-          {HelpIcon()}
-          <span>Help Center</span>
-        </button>
         <button
           type="button"
           onClick={onLogout}

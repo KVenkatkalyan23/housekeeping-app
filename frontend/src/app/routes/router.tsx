@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
+import { AdminAttendanceLogsPage } from "../../features/admin-portal/attendance-logs/pages/AdminAttendanceLogsPage";
 import { AdminAuditLogsPage } from "../../features/admin-portal/audit-logs/pages/AdminAuditLogsPage";
 import { AdminDashboardPage } from "../../features/admin-portal/dashboard/pages/AdminDashboardPage";
 import { AdminStaffDirectoryPage } from "../../features/admin-portal/staff-directory/pages/AdminStaffDirectoryPage";
@@ -54,6 +55,10 @@ export const router = createBrowserRouter([
       {
         path: "tasks",
         element: <AdminTaskAllocationPage />,
+      },
+      {
+        path: "attendance",
+        element: <AdminAttendanceLogsPage />,
       },
     ],
   },
