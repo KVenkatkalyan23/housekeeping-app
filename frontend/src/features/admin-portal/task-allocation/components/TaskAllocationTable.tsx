@@ -17,12 +17,14 @@ export function TaskAllocationTable({
   isError,
   errorMessage,
   onRetry,
+  onReassign,
 }: {
   items: AdminAllocatedTaskItem[]
   isLoading: boolean
   isError: boolean
   errorMessage: string
   onRetry: () => void
+  onReassign: (item: AdminAllocatedTaskItem) => void
 }) {
   return (
     <section className="overflow-hidden rounded-[1.45rem] bg-white shadow-[0_18px_45px_rgba(25,39,52,0.06)]">
@@ -78,7 +80,11 @@ export function TaskAllocationTable({
             ) : null}
 
             {items.map((item) => (
-              <TaskAllocationRow key={item.taskId} item={item} />
+              <TaskAllocationRow
+                key={item.taskId}
+                item={item}
+                onReassign={onReassign}
+              />
             ))}
           </tbody>
         </table>

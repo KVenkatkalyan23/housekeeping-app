@@ -1,4 +1,4 @@
-import { useDeferredValue } from 'react'
+import { useDeferredValue, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 
@@ -16,6 +16,7 @@ import { TaskAllocationHeader } from '../components/TaskAllocationHeader'
 import { TaskAllocationPagination } from '../components/TaskAllocationPagination'
 import { TaskAllocationSummaryCards } from '../components/TaskAllocationSummaryCards'
 import { TaskAllocationTable } from '../components/TaskAllocationTable'
+import { ManualReassignmentModal } from '../reassignment/components/ManualReassignmentModal'
 import {
   resetTaskAllocationFilters,
   setTaskAllocationPage,
@@ -23,6 +24,10 @@ import {
   setTaskAllocationStatus,
   setTaskAllocationTaskType,
 } from '../slice'
+import type {
+  AdminAllocatedTaskItem,
+  ManualTaskReassignmentResponse,
+} from '../types'
 
 function resolveErrorMessage(error: unknown) {
   if (!error || typeof error !== 'object') {
@@ -62,6 +67,15 @@ function formatDisplayName(value: string | null) {
 export function AdminTaskAllocationPage() {
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
+  const [selectedTask, setSelectedTask] = useState<AdminAllocatedTaskItem | null>(
+    null,
+  )
+  const [assignmentOverrides, setAssignmentOverrides] = useState<
+    Record<
+      string,
+      Pick<AdminAllocatedTaskItem, 'assignedStaffId' | 'assignedStaffName' | 'status'>
+    >
+  >({})
   const { username } = useSelector((state: RootState) => state.auth)
   const { page, size, search, taskType, status } = useSelector(
     (state: RootState) => state.adminTaskAllocationUi,
@@ -76,6 +90,22 @@ export function AdminTaskAllocationPage() {
     taskType,
     status,
   })
+
+  const visibleItems = (listQuery.data?.items ?? []).map((item) => {
+    const override = assignmentOverrides[item.taskId]
+    return override ? { ...item, ...override } : item
+  })
+
+  const handleReassigned = (response: ManualTaskReassignmentResponse) => {
+    setAssignmentOverrides((current) => ({
+      ...current,
+      [response.taskId]: {
+        assignedStaffId: response.newStaffId,
+        assignedStaffName: response.newStaffName,
+        status: response.taskStatus,
+      },
+    }))
+  }
 
   const handleLogout = () => {
     clearPersistedAuthState()
@@ -132,11 +162,12 @@ export function AdminTaskAllocationPage() {
                 />
 
                 <TaskAllocationTable
-                  items={listQuery.data?.items ?? []}
+                  items={visibleItems}
                   isLoading={listQuery.isLoading}
                   isError={listQuery.isError}
                   errorMessage={resolveErrorMessage(listQuery.error)}
                   onRetry={() => listQuery.refetch()}
+                  onReassign={(item) => setSelectedTask(item)}
                 />
 
                 <TaskAllocationPagination
@@ -152,6 +183,13 @@ export function AdminTaskAllocationPage() {
           </div>
         </div>
       </div>
+
+      <ManualReassignmentModal
+        open={selectedTask !== null}
+        task={selectedTask}
+        onClose={() => setSelectedTask(null)}
+        onReassigned={handleReassigned}
+      />
     </main>
   )
 }

@@ -10,6 +10,7 @@ export type AdminTaskStatusFilter =
 
 export type AdminTaskType = Exclude<AdminTaskTypeFilter, 'ALL'>
 export type AdminTaskStatus = Exclude<AdminTaskStatusFilter, 'ALL'>
+export type AdminTaskAssignmentSource = 'AUTO' | 'MANUAL'
 
 export interface AdminTaskAllocationSummary {
   taskDate: string
@@ -47,4 +48,33 @@ export interface AdminAllocatedTaskListResponse {
   size: number
   totalElements: number
   totalPages: number
+}
+
+export interface ReassignmentCandidateItem {
+  staffId: string
+  fullName: string
+  shiftName: string
+  allocatedMinutes: number
+  remainingMinutes: number
+  capacityAvailable: boolean
+}
+
+export interface ManualTaskReassignmentRequest {
+  taskId: string
+  targetStaffId: string
+}
+
+export interface ManualTaskReassignmentResponse {
+  taskId: string
+  roomId: string
+  roomNumber: string
+  previousStaffId: string
+  previousStaffName: string
+  newStaffId: string
+  newStaffName: string
+  shiftId: string
+  shiftName: string
+  taskStatus: AdminTaskStatus
+  assignmentSource: AdminTaskAssignmentSource
+  successMessage: string
 }

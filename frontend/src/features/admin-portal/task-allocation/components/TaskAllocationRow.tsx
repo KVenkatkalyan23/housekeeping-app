@@ -39,7 +39,23 @@ function getInitial(name: string | null) {
   return name?.trim().charAt(0).toUpperCase() || 'U'
 }
 
-export function TaskAllocationRow({ item }: { item: AdminAllocatedTaskItem }) {
+function canReassignTask(item: AdminAllocatedTaskItem) {
+  return (
+    Boolean(item.assignedStaffId) &&
+    item.status !== 'COMPLETED' &&
+    item.status !== 'CANCELLED'
+  )
+}
+
+export function TaskAllocationRow({
+  item,
+  onReassign,
+}: {
+  item: AdminAllocatedTaskItem
+  onReassign: (item: AdminAllocatedTaskItem) => void
+}) {
+  const reassignable = canReassignTask(item)
+
   return (
     <tr className="border-t border-[#edf1f4]">
       <td className="px-4 py-5">
@@ -50,7 +66,7 @@ export function TaskAllocationRow({ item }: { item: AdminAllocatedTaskItem }) {
               Room {item.roomNumber}
             </p>
             <p className="mt-1 text-xs leading-5 text-[#7b8897]">
-              {[item.floorLabel, item.roomTypeLabel].filter(Boolean).join(' • ') ||
+              {[item.floorLabel, item.roomTypeLabel].filter(Boolean).join(' - ') ||
                 'Active room task'}
             </p>
           </div>
@@ -89,12 +105,19 @@ export function TaskAllocationRow({ item }: { item: AdminAllocatedTaskItem }) {
         <TaskPriorityBadge priority={item.priorityLabel} />
       </td>
       <td className="px-4 py-5 text-right">
-        <button
-          type="button"
-          className="rounded-full border border-[#edf1f5] bg-white px-3 py-2 text-sm font-semibold text-[#8391a1]"
-        >
-          ...
-        </button>
+        {reassignable ? (
+          <button
+            type="button"
+            onClick={() => onReassign(item)}
+            className="rounded-full bg-[#0b8b7d] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(11,139,125,0.18)] transition hover:bg-[#0a7b70]"
+          >
+            Reassign
+          </button>
+        ) : (
+          <span className="inline-flex rounded-full border border-[#edf1f5] bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#9aa5b2]">
+            Unavailable
+          </span>
+        )}
       </td>
     </tr>
   )
