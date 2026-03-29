@@ -1,6 +1,9 @@
 import { baseApi } from '../../../shared/api/baseApi'
 import type {
   AdminAllocatedTaskListResponse,
+  ManualTaskReassignmentRequest,
+  ManualTaskReassignmentResponse,
+  ReassignmentCandidateItem,
   AdminTaskAllocationSummary,
   AdminTaskStatusFilter,
   AdminTaskTypeFilter,
@@ -46,10 +49,33 @@ export const adminTaskAllocationApi = baseApi.injectEndpoints({
       }),
       providesTags: ['AdminTaskAllocation'],
     }),
+    getTaskReassignmentCandidates: builder.query<
+      ReassignmentCandidateItem[],
+      { taskId: string }
+    >({
+      query: ({ taskId }) => ({
+        url: '/admin/tasks/reassign/candidates',
+        method: 'GET',
+        params: { taskId },
+      }),
+    }),
+    reassignTask: builder.mutation<
+      ManualTaskReassignmentResponse,
+      ManualTaskReassignmentRequest
+    >({
+      query: (body) => ({
+        url: '/admin/tasks/reassign',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['AdminTaskAllocation'],
+    }),
   }),
 })
 
 export const {
   useGetAdminTaskAllocationSummaryQuery,
   useGetAdminTaskAllocationListQuery,
+  useGetTaskReassignmentCandidatesQuery,
+  useReassignTaskMutation,
 } = adminTaskAllocationApi
